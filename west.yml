@@ -1,0 +1,12 @@
+# motor/west.yml
+manifest:
+  remotes:
+    - name: zephyrproject
+      url-base: https://github.com/zephyrproject-rtos
+  projects:
+    - name: zephyr
+      path: zephyr
+      remote: zephyrproject
+      revision:  main # 确保此版本支持 STM32G4i
+  self:
+    path: motor      

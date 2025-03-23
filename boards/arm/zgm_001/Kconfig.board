@@ -1,0 +1,8 @@
+# 必须包含SOC系列选择
+config BOARD_ZGM_001
+    bool "ZGM Motor Control Board"
+    depends on SOC_STM32G473XX
+    select SOC_SERIES_STM32G4X  # 确保这行存在
+    select HAS_DTS_GPIO_LEDS
+    select HAS_DTS_SERIAL
+    select HAS_STM32CUBE
