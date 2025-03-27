@@ -1,0 +1,6 @@
+board:
+  name: zgm_001
+  full_name: Nucleo G431RB
+  vendor: st
+  socs:
+    - name: stm32g431xx
