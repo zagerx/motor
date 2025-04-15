@@ -1,0 +1,41 @@
+# Copyright (c) 2021, Teslabs Engineering S.L.
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  STM32S PWM device.
+
+  The PWM device is expected to be a children of any STM32 advanced control
+  timer. Example usage:
+
+      &timers1 {
+          pwm: pwm {
+              compatible = "st,stm32-pwm-custom";
+              pinctrl-0 = <&tim1_ch1_pa8 &tim1_ch2_pa9 &tim1_ch3_pa10 &tim1_ocp_pa11>;
+              pinctrl-names = "default";
+              t_dead = <1000>;  // 死区时间配置
+              ...
+          };
+      };
+
+compatible: "st,stm32-pwm-custom"
+
+include: [base.yaml, pinctrl-device.yaml]
+
+properties:
+  pinctrl-0:
+    required: true
+
+  pinctrl-names:
+    required: true
+
+child-binding:
+  description: PWM driver configuration
+  properties:
+    t_dead_ns:
+      type: int
+      required: false
+      description: Dead time in nanoseconds
+    slave:
+      type: int
+      required: true
+      description: Dead time in nanoseconds      

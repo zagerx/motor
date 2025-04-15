@@ -5,4 +5,5 @@
 #add_subdirectory_ifdef(CONFIG_SPINNER_CURRSMP currsmp)
 #add_subdirectory_ifdef(CONFIG_SPINNER_FEEDBACK feedback)
 #add_subdirectory_ifdef(CONFIG_SPINNER_SVPWM svpwm)
-add_subdirectory(svpwm)
+# add_subdirectory(svpwm)
+add_subdirectory(pwm)

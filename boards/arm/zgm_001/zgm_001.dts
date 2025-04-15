@@ -6,15 +6,15 @@
 
 /dts-v1/;
 #include <st/g4/stm32g431Xb.dtsi>
-#include <st/g4/stm32g431r(6-8-b)tx-pinctrl.dtsi>
+#include <st/g4/stm32g431c(6-8-b)ux-pinctrl.dtsi>
 
 / {
 	model = "STMicroelectronics STM32G431RB-NUCLEO_X board";
 	compatible = "st,stm32g431rb_x-nucleo";
 
 	chosen {
-		zephyr,console = &lpuart1;
-		zephyr,shell-uart = &lpuart1;
+		zephyr,console = &usart3;
+		zephyr,shell-uart = &usart3;
 		zephyr,sram = &sram0;
 		zephyr,flash = &flash0;
 		zephyr,code-partition = &slot0_partition;
@@ -23,7 +23,7 @@
 	leds: leds {
 		compatible = "gpio-leds";
 		green_led: led_0 {
-			gpios = <&gpioa 5 GPIO_ACTIVE_HIGH>;
+			gpios = <&gpioc 4 GPIO_ACTIVE_HIGH>;
 			label = "User LD2";
 		};
 	};
@@ -49,7 +49,7 @@
 };
 
 &clk_lse {
-	status = "okay";
+	status = "disabled";
 };
 
 &clk_hsi48 {
@@ -85,15 +85,8 @@
 	status = "okay";
 };
 
-&usart1 {
-	pinctrl-0 = <&usart1_tx_pc4 &usart1_rx_pc5>;
-	pinctrl-names = "default";
-	current-speed = <115200>;
-	status = "okay";
-};
-
-&lpuart1 {
-	pinctrl-0 = <&lpuart1_tx_pa2 &lpuart1_rx_pa3>;
+&usart3 {
+	pinctrl-0 = <&usart3_tx_pb10 &usart3_rx_pb11>;
 	pinctrl-names = "default";
 	current-speed = <115200>;
 	status = "okay";
@@ -101,28 +94,6 @@
 
 &i2c1 {
 	pinctrl-0 = <&i2c1_scl_pb8 &i2c1_sda_pb9>;
-	pinctrl-names = "default";
-	status = "okay";
-};
-
-&spi1 {
-	pinctrl-0 = <&spi1_sck_pa5 &spi1_miso_pa6 &spi1_mosi_pa7>;
-	pinctrl-names = "default";
-	cs-gpios = <&gpiob 6 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
-	status = "okay";
-};
-
-&spi2 {
-	pinctrl-0 = <&spi2_nss_pb12 &spi2_sck_pb13
-		     &spi2_miso_pb14 &spi2_mosi_pb15>;
-	pinctrl-names = "default";
-	status = "okay";
-};
-
-&spi3 {
-	/* SPI3 on the ST Morpho Connector CN7 pins 17, 1, 2, 3*/
-	pinctrl-0 = <&spi3_nss_pa15 &spi3_sck_pc10
-		     &spi3_miso_pc11 &spi3_mosi_pc12>;
 	pinctrl-names = "default";
 	status = "okay";
 };
@@ -175,11 +146,6 @@ stm32_lp_tick_source: &lptim1 {
 		};
 	};
 };
-
-&iwdg {
-	status = "okay";
-};
-
 &dac1 {
 	status = "okay";
 	pinctrl-0 = <&dac1_out1_pa4>;

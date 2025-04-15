@@ -6,10 +6,10 @@ project(motor)
 
 
 add_subdirectory(drivers)
-add_subdirectory(lib)
+# add_subdirectory(lib)
 zephyr_include_directories(include)
 
 
-target_sources(app PRIVATE src/main.c)
-target_link_libraries(app PRIVATE ..__motor__drivers__svpwm)  # 关键：使用实际库名
-target_link_libraries(app PRIVATE ..__motor__lib__utils)  # 关键：使用实际库名
+target_sources(app PRIVATE modulestest/main.c)
+# target_link_libraries(app PRIVATE ..__motor__drivers__svpwm)  # 关键：使用实际库名
+# target_link_libraries(app PRIVATE ..__motor__lib__utils)  # 关键：使用实际库名
