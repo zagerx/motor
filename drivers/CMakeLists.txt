@@ -7,5 +7,5 @@
 #add_subdirectory_ifdef(CONFIG_SPINNER_SVPWM svpwm)
 # add_subdirectory(svpwm)
 
-add_subdirectory(currsmp)
+#add_subdirectory(currsmp)
 add_subdirectory(pwm)

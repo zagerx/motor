@@ -1,5 +1,6 @@
-// #include <stm31h7xx_ll_tim.h>
+#include "stm32h7xx.h"
 #include <stm32_ll_tim.h>
+#include <sys/_stdint.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/pinctrl.h>
@@ -11,47 +12,82 @@ LOG_MODULE_REGISTER(pwm_stm32, LOG_LEVEL_DBG);
 
 #define DT_DRV_COMPAT st_stm32_pwm_custom
 struct pwm_stm32_config {
-	TIM_TypeDef *timer;
-	struct stm32_pclken pclken;
-	const struct pinctrl_dev_config *pincfg;
-	uint32_t t_dead;
-	uint32_t slave_enable;
+    TIM_TypeDef *timer;
+    struct stm32_pclken pclken;
+    const struct pinctrl_dev_config *pincfg;
+    uint32_t timing_params[3];  // [0]=t_dead_ns, [1]=arr, [2]=psc
+    uint32_t slave_enable;
 };
+struct pwm_driver_api {
+	void (*start)(const struct device *dev);
+	void (*stop)(const struct device *dev);
+	void (*set_phase_voltages)(const struct device *dev,
+				   float ua, float ub, float uc);
+};
+
 void tim1_enable(void)
 {
+  LL_TIM_EnableAllOutputs(TIM8);
+  LL_TIM_CC_EnableChannel(TIM8, LL_TIM_CHANNEL_CH1 | LL_TIM_CHANNEL_CH2 | LL_TIM_CHANNEL_CH3);
+
   LL_TIM_EnableAllOutputs(TIM1);
-  LL_TIM_EnableCounter(TIM1);
   LL_TIM_CC_EnableChannel(TIM1, LL_TIM_CHANNEL_CH1 | LL_TIM_CHANNEL_CH2 | LL_TIM_CHANNEL_CH3 |\
                                 LL_TIM_CHANNEL_CH1N| LL_TIM_CHANNEL_CH1N| LL_TIM_CHANNEL_CH1N);  
   LL_TIM_CC_EnableChannel(TIM1,LL_TIM_CHANNEL_CH4);
-  LL_TIM_EnableAllOutputs(TIM8);
-  LL_TIM_CC_EnableChannel(TIM8, LL_TIM_CHANNEL_CH1 | LL_TIM_CHANNEL_CH2 | LL_TIM_CHANNEL_CH3);  
+  LL_TIM_EnableCounter(TIM1);
 }
 
 void tim1_set_pwm(float _a, float _b, float _c)
 {
-    uint32_t arr = LL_TIM_GetAutoReload(TIM1) + 1; // 动态获取ARR
-    LL_TIM_OC_SetCompareCH1(TIM1, (uint32_t)(_a * arr));
-    LL_TIM_OC_SetCompareCH2(TIM1, (uint32_t)(_b * arr));
-    LL_TIM_OC_SetCompareCH3(TIM1, (uint32_t)(_c * arr));
-    LL_TIM_OC_SetCompareCH4(TIM1, (uint32_t)(_c * arr));
-    LL_TIM_OC_SetCompareCH1(TIM8, (uint32_t)(_a * arr));
-    LL_TIM_OC_SetCompareCH2(TIM8, (uint32_t)(_b * arr));
-    LL_TIM_OC_SetCompareCH3(TIM8, (uint32_t)(_c * arr));    
+	uint16_t _ARR = 13750;
+    LL_TIM_OC_SetCompareCH1(TIM1, (uint32_t)(_ARR/2-1));
+    LL_TIM_OC_SetCompareCH2(TIM1, (uint32_t)(_ARR/2-1));
+    LL_TIM_OC_SetCompareCH3(TIM1, (uint32_t)(_ARR/2-1));
+    LL_TIM_OC_SetCompareCH4(TIM1, (uint32_t)(_ARR/2-1));
+    LL_TIM_OC_SetCompareCH1(TIM8, (uint32_t)(_ARR/2-1));
+    LL_TIM_OC_SetCompareCH2(TIM8, (uint32_t)(_ARR/2-1));
+    LL_TIM_OC_SetCompareCH3(TIM8, (uint32_t)(_ARR/2-1));    
 }
 
-// struct pwm_driver_api {
-// 	void (*start)(const struct device *dev);
-// 	void (*stop)(const struct device *dev);
-// 	void (*set_phase_voltages)(const struct device *dev,
-// 				   float ua, float ub, float uc);
-// };
+static void pwm_stm32_stop(const struct device *dev)
+{
+	const struct pwm_stm32_config *cfg = dev->config;
+	uint32_t slave_flag;
+	slave_flag = cfg->slave_enable;
+	if(!slave_flag)
+	{
+	}else{
+	}
+}
+static void pwm_stm32_start(const struct device *dev)
+{
+	const struct pwm_stm32_config *cfg = dev->config;
+	uint32_t slave_flag;
+	slave_flag = cfg->slave_enable;
 
-// static const struct pwm_driver_api svpwm_stm32_driver_api = {
-// 	.start = NULL,
-// 	.stop = NULL,
-// 	.set_phase_voltages = NULL,
-// };
+	if(!slave_flag)
+	{
+		LOG_INF("master timer");
+		LL_TIM_EnableAllOutputs(cfg->timer);
+		LL_TIM_EnableCounter(cfg->timer);
+		LL_TIM_CC_EnableChannel(cfg->timer,LL_TIM_CHANNEL_CH4);
+	}else{
+		LL_TIM_EnableAllOutputs(cfg->timer);	
+	}
+	LL_TIM_CC_EnableChannel(cfg->timer,\
+							LL_TIM_CHANNEL_CH1 | LL_TIM_CHANNEL_CH2 | LL_TIM_CHANNEL_CH3 |\
+							LL_TIM_CHANNEL_CH1N| LL_TIM_CHANNEL_CH1N| LL_TIM_CHANNEL_CH1N);  
+
+}
+static void pwm_stm32_setduties(const struct device *dev,float a,float b,float c)
+{
+	const struct pwm_stm32_config *cfg = dev->config;
+    LL_TIM_OC_SetCompareCH1(cfg->timer, (uint32_t)(cfg->timing_params[1]*a));
+    LL_TIM_OC_SetCompareCH2(cfg->timer, (uint32_t)(cfg->timing_params[1]*b));
+    LL_TIM_OC_SetCompareCH3(cfg->timer, (uint32_t)(cfg->timing_params[1]*c));
+
+    LL_TIM_OC_SetCompareCH4(cfg->timer, (uint32_t)(200)); //TODO
+}
 /*==========================================================================================
  * @brief        配置PWM频率、对应通道
  所需参数  
@@ -65,7 +101,6 @@ void tim1_set_pwm(float _a, float _b, float _c)
 --------------------------------------------------------------------------------------------*/
 static int pwm_stm32_init(const struct device *dev)
 {
-    LOG_INF("dev name: %s", dev->name);
     const struct pwm_stm32_config *config = dev->config;
 	int ret;
 	LL_TIM_InitTypeDef tim_init;
@@ -78,6 +113,7 @@ static int pwm_stm32_init(const struct device *dev)
 		LOG_ERR("pinctrl setup failed (%d)", ret);
 		return ret;
 	}
+	/* 启动定时器时钟*/
 	const struct device *clk;
 	clk = DEVICE_DT_GET(STM32_CLOCK_CONTROL_NODE);
 	ret = clock_control_on(clk, (clock_control_subsys_t *)&config->pclken);
@@ -85,10 +121,17 @@ static int pwm_stm32_init(const struct device *dev)
 		LOG_ERR("Could not turn on timer clock (%d)", ret);
 		return ret;
 	}
-	LL_TIM_StructInit(&tim_init);
+	/* 获取定时器频率 */
+	uint32_t rate;
+	if(clock_control_get_rate(clk, (clock_control_subsys_t *)&config->pclken, &rate))
+	{
+		LOG_ERR("clock_control_get_rate (%d)", ret);
+	}
+
 	tim_init.CounterMode = LL_TIM_COUNTERMODE_CENTER_UP;
-	tim_init.Autoreload = 8400;
-	tim_init.RepetitionCounter = 1U;
+    tim_init.Autoreload = config->timing_params[1];  // arr
+    tim_init.Prescaler = config->timing_params[2];   // psc
+	tim_init.RepetitionCounter = 0U;
 	if (LL_TIM_Init(config->timer, &tim_init) != SUCCESS) {
 		LOG_ERR("Could not initialize timer");
 		return -EIO;
@@ -130,7 +173,7 @@ static int pwm_stm32_init(const struct device *dev)
 	brk_dt_init.OSSRState = LL_TIM_OSSR_DISABLE;
 	brk_dt_init.OSSIState = LL_TIM_OSSI_DISABLE;
 	brk_dt_init.LockLevel = LL_TIM_LOCKLEVEL_OFF;
-	brk_dt_init.DeadTime = 120;
+    brk_dt_init.DeadTime = config->timing_params[0];  // t_dead_ns
 	brk_dt_init.BreakState = LL_TIM_BREAK_DISABLE;
 	brk_dt_init.BreakPolarity = LL_TIM_BREAK_POLARITY_HIGH;
 	brk_dt_init.BreakFilter = LL_TIM_BREAK_FILTER_FDIV1;
@@ -143,26 +186,29 @@ static int pwm_stm32_init(const struct device *dev)
 	return 0;
 }
 
-#define PMW_STM32_INIT(n)					\
-\
-	PINCTRL_DT_INST_DEFINE(n);					\
-		static const struct pwm_stm32_config pwm_stm32_config_##n = { \
-		.timer = (TIM_TypeDef *)DT_REG_ADDR(DT_INST_PARENT(n)), \
-		.pclken = STM32_CLOCK_INFO(0, DT_INST_PARENT(n)),\
-		.t_dead = DT_PROP_OR(DT_INST_CHILD(n, driver), t_dead_ns, 0), \
-		.slave_enable = DT_PROP_OR(DT_INST_CHILD(n, driver), slave, 0), \
-		.pincfg = PINCTRL_DT_INST_DEV_CONFIG_GET(n),		\
-	};								\
-		\
+#define PMW_STM32_INIT(n) \
+    PINCTRL_DT_INST_DEFINE(n); \
+    static const struct pwm_stm32_config pwm_stm32_config_##n = { \
+        .timer = (TIM_TypeDef *)DT_REG_ADDR(DT_INST_PARENT(n)), \
+        .pclken = STM32_CLOCK_INFO(0, DT_INST_PARENT(n)), \
+        .timing_params = DT_INST_PROP(n, timing_params), \
+        .slave_enable = DT_INST_PROP(n, slave), \
+        .pincfg = PINCTRL_DT_INST_DEV_CONFIG_GET(n), \
+    }; \
+	\
+	static const struct pwm_driver_api pwm_stm32_api_##n = {\
+		.start = pwm_stm32_start,\
+		.stop = pwm_stm32_stop,\
+		.set_phase_voltages = pwm_stm32_setduties,\
+	};\
+	\
 	DEVICE_DT_INST_DEFINE(n, \
-		&pwm_stm32_init, \
-		NULL,	\
-		NULL,	\
-		&pwm_stm32_config_##n,			\
-		POST_KERNEL,				\
-		80,	\
-		NULL\
-	);
+        &pwm_stm32_init, \
+        NULL, NULL, \
+        &pwm_stm32_config_##n, \
+        POST_KERNEL, \
+        CONFIG_KERNEL_INIT_PRIORITY_DEVICE, \
+        &pwm_stm32_api_##n);
 
 DT_INST_FOREACH_STATUS_OKAY(PMW_STM32_INIT)
 

@@ -1,0 +1,20 @@
+# Copyright 2023 SyriusRobotics
+# SPDX-License-Identifier: Apache-2.0
+
+description: BLDC Motor
+
+compatible: "bldc-motor"
+
+properties:
+  currsmp:
+    type: phandle
+    required: false
+
+  feedback:
+    type: phandle
+    required: false
+
+  pwm:
+    type: phandle
+    required: true
+

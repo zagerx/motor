@@ -41,6 +41,27 @@
 		led0 = &green_led;
 		led1 = &yellow_led;
 	};
+
+    motors {
+        motor0: motor_0 {
+            compatible = "bldc-motor";
+            pwm = <&pwm1>;
+        };
+        motor1: motor_1 {
+            compatible = "bldc-motor";
+            pwm = <&pwm8>;
+        };
+    };
+	control_algorithm {
+		foc1:ctrl_algo1{
+			compatible = "foc-ctrl-algo";
+			modulate = <1>;
+		};
+		foc2:ctrl_algo2{
+			compatible = "foc-ctrl-algo";
+			modulate = <1>;
+		};
+	};
 };
 
 &clk_lsi {
@@ -100,42 +121,37 @@
 };
 
 &timers1 {
-	pwm1: pwm {
-		compatible = "st,stm32-pwm-custom";
-		label = "pwm-motor1";
-		pinctrl-0 = <&tim1_ch1_pe9  &tim1_ch1n_pe8
-			     &tim1_ch2_pe11 &tim1_ch2n_pe10
-			     &tim1_ch3_pe13 &tim1_ch3n_pe12>;
-		pinctrl-names = "default";
-        driver {  // 添加子节点
-            t_dead_ns = <50>;
-			slave = <0>;
-        };
-		status = "okay";
-	};
+    pwm1: pwm {
+        compatible = "st,stm32-pwm-custom";
+        pinctrl-0 = <&tim1_ch1_pe9  &tim1_ch1n_pe8
+                    &tim1_ch2_pe11 &tim1_ch2n_pe10
+                    &tim1_ch3_pe13 &tim1_ch3n_pe12>;
+        pinctrl-names = "default";
+        timing-params = <50 13750 0>;  // t_dead_ns, arr, psc
+        slave = <0>;
+        status = "okay";
+    };
 };
 
 &timers8 {
-	pwm8: pwm {
-		compatible = "st,stm32-pwm-custom";
-		label = "pwm-motor2";
-		pinctrl-0 = <&tim8_ch1_pc6 &tim8_ch1n_pa7
-			     &tim8_ch2_pc7 &tim8_ch2n_pb14
-			     &tim8_ch3_pc8 &tim8_ch3n_pb15>;
-		pinctrl-names = "default";
-        driver {  // 添加子节点
-            t_dead_ns = <50>;
-			slave = <1>;
-        };
-		status = "okay";
-	};
+    pwm8: pwm {
+        compatible = "st,stm32-pwm-custom";
+        pinctrl-0 = <&tim8_ch1_pc6 &tim8_ch1n_pa7
+                    &tim8_ch2_pc7 &tim8_ch2n_pb14
+                    &tim8_ch3_pc8 &tim8_ch3n_pb15>;
+        pinctrl-names = "default";
+        timing-params = <50 13750 0>;  // t_dead_ns, arr, psc
+        slave = <1>;
+        status = "okay";
+    };
 };
-
 &adc1 {
 	currsmp1: currsmp {
 		compatible = "st,stm32-currsmp-shunt";
+		pinctrl-0 = <&adc1_inp16_pa0  &adc1_inp17_pa1 &adc1_inp14_pa2>;
+		pinctrl-names = "default";
+		adc-channels = <16 17 14>;		
 		status = "okay";
-		interrupts = <25 0>;
 	};
 };
 

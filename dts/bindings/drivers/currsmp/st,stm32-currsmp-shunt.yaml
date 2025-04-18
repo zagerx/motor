@@ -26,10 +26,10 @@ include: [base.yaml, pinctrl-device.yaml]
 
 properties:
   pinctrl-0:
-    required: false
+    required: true
 
   pinctrl-names:
-    required: false
+    required: true
 
   adc-resolution:
     type: int
