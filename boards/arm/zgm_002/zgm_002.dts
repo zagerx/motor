@@ -131,7 +131,13 @@
 	};
 };
 
-
+&adc1 {
+	currsmp1: currsmp {
+		compatible = "st,stm32-currsmp-shunt";
+		status = "okay";
+		interrupts = <25 0>;
+	};
+};
 
 
 &backup_sram {
