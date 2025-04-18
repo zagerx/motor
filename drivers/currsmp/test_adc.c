@@ -103,24 +103,24 @@ void MX_ADC1_Init(void)
   /* USER CODE END ADC1_Init 0 */
 
 
-  LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
+//   LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
 
   LL_RCC_SetADCClockSource(LL_RCC_ADC_CLKSOURCE_PLL2P);
 
   /* Peripheral clock enable */
   LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_ADC12);
 
-  LL_AHB4_GRP1_EnableClock(LL_AHB4_GRP1_PERIPH_GPIOA);
+//   LL_AHB4_GRP1_EnableClock(LL_AHB4_GRP1_PERIPH_GPIOA);
   /**ADC1 GPIO Configuration
   PA0   ------> ADC1_INP16
   PA1   ------> ADC1_INP17
   PA2   ------> ADC1_INP14
   PA6   ------> ADC1_INP3
   */
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_0|LL_GPIO_PIN_1|LL_GPIO_PIN_2|LL_GPIO_PIN_6;
-  GPIO_InitStruct.Mode = LL_GPIO_MODE_ANALOG;
-  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+//   GPIO_InitStruct.Pin = LL_GPIO_PIN_0|LL_GPIO_PIN_1|LL_GPIO_PIN_2|LL_GPIO_PIN_6;
+//   GPIO_InitStruct.Mode = LL_GPIO_MODE_ANALOG;
+//   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+//   LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /* ADC1 interrupt Init */
 

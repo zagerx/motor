@@ -34,7 +34,7 @@ int main(void)
 	tim1_set_pwm(0.5f,0.5f,0.5f);
 	gpio_pin_configure_dt(&led, GPIO_OUTPUT_ACTIVE);      
 	while (1) {
-		gpio_pin_toggle_dt(&led);
+		// gpio_pin_toggle_dt(&led);
 		k_msleep(SLEEP_TIME_MS);
 	}
 	return 0;
