@@ -1,31 +1,52 @@
+// #include <sys/_stdint.h>
+#include "zephyr/logging/log.h"
 #include <zephyr/device.h>
 #include <zephyr/drivers/adc.h>
 #include <zephyr/irq.h>
 #include <zephyr/drivers/pinctrl.h>
+#include <zephyr/drivers/clock_control/stm32_clock_control.h>
+#include <zephyr/logging/log.h>
+LOG_MODULE_REGISTER(currsmp_shunt_stm32, LOG_LEVEL_DBG);
 #define DT_DRV_COMPAT st_stm32_currsmp_shunt
 struct currsmp_shunt_stm32_config {
 	ADC_TypeDef *adc;
-	// struct stm32_pclken pclken;
+	struct stm32_pclken pclken;
 	const struct pinctrl_dev_config *pcfg;
+    uint32_t slave_mode_flag;
     void (*irq_cfg_func)(void);
 };
 extern void ADC_IRQHandler(void);
-static void adc_isr(const struct device *dev)
+static void adc_stm32_isr(const struct device *dev)
 {
     ADC_IRQHandler();
 }
 
-extern void MX_ADC1_Init(void);
 void adc1_start(void);
 
-static int adc_stm32_init(const struct device *dev)
+static int currsmp_shunt_stm32_init(const struct device *dev)
 {
     const struct currsmp_shunt_stm32_config *cfg = dev->config;
-    MX_ADC1_Init();
-    int ret = pinctrl_apply_state(cfg->pcfg, PINCTRL_STATE_DEFAULT);
+    int ret;
+
+    if(cfg->slave_mode_flag)
+    {
+        LOG_INF("adc----->cfg->name:%s",dev->name);
+        return 1;
+    }
+
+    const struct device *clk;
+	clk = DEVICE_DT_GET(STM32_CLOCK_CONTROL_NODE);
+	ret = clock_control_on(clk, (clock_control_subsys_t *)&cfg->pclken);
     if (ret < 0) {
         return ret;
     }
+
+    ret = pinctrl_apply_state(cfg->pcfg, PINCTRL_STATE_DEFAULT);
+    if (ret < 0) {
+        return ret;
+    }
+
+
     LL_ADC_InitTypeDef ADC_InitStruct = {0};
     LL_ADC_REG_InitTypeDef ADC_REG_InitStruct = {0};
     LL_ADC_CommonInitTypeDef ADC_CommonInitStruct = {0};
@@ -41,15 +62,26 @@ static int adc_stm32_init(const struct device *dev)
     ADC_REG_InitStruct.ContinuousMode = LL_ADC_REG_CONV_CONTINUOUS;
     ADC_REG_InitStruct.Overrun = LL_ADC_REG_OVR_DATA_OVERWRITTEN;
     LL_ADC_REG_Init(cfg->adc, &ADC_REG_InitStruct);
-    ADC_CommonInitStruct.CommonClock = LL_ADC_CLOCK_ASYNC_DIV4;
-    ADC_CommonInitStruct.Multimode = LL_ADC_MULTI_DUAL_INJ_SIMULT;
-    ADC_CommonInitStruct.MultiTwoSamplingDelay = LL_ADC_MULTI_TWOSMP_DELAY_2CYCLES_5;
-    LL_ADC_CommonInit(__LL_ADC_COMMON_INSTANCE(cfg->adc), &ADC_CommonInitStruct);
-    ADC_INJ_InitStruct.TriggerSource = LL_ADC_INJ_TRIG_EXT_TIM1_CH4;
-    ADC_INJ_InitStruct.SequencerLength = LL_ADC_INJ_SEQ_SCAN_ENABLE_3RANKS;
-    ADC_INJ_InitStruct.SequencerDiscont = LL_ADC_INJ_SEQ_DISCONT_DISABLE;
-    ADC_INJ_InitStruct.TrigAuto = LL_ADC_INJ_TRIG_INDEPENDENT;
-    LL_ADC_INJ_Init(cfg->adc, &ADC_INJ_InitStruct);
+
+    if(!cfg->slave_mode_flag)
+    {
+        ADC_CommonInitStruct.CommonClock = LL_ADC_CLOCK_ASYNC_DIV4;
+        ADC_CommonInitStruct.Multimode = LL_ADC_MULTI_DUAL_INJ_SIMULT;
+        ADC_CommonInitStruct.MultiTwoSamplingDelay = LL_ADC_MULTI_TWOSMP_DELAY_2CYCLES_5;
+        LL_ADC_CommonInit(__LL_ADC_COMMON_INSTANCE(cfg->adc), &ADC_CommonInitStruct);
+        ADC_INJ_InitStruct.TriggerSource = LL_ADC_INJ_TRIG_EXT_TIM1_CH4;
+        ADC_INJ_InitStruct.SequencerLength = LL_ADC_INJ_SEQ_SCAN_ENABLE_3RANKS;
+        ADC_INJ_InitStruct.SequencerDiscont = LL_ADC_INJ_SEQ_DISCONT_DISABLE;
+        ADC_INJ_InitStruct.TrigAuto = LL_ADC_INJ_TRIG_INDEPENDENT;
+        LL_ADC_INJ_Init(cfg->adc, &ADC_INJ_InitStruct);
+    }else{
+        ADC_INJ_InitStruct.SequencerLength = LL_ADC_INJ_SEQ_SCAN_ENABLE_3RANKS;
+        ADC_INJ_InitStruct.SequencerDiscont = LL_ADC_INJ_SEQ_DISCONT_DISABLE;
+        ADC_INJ_InitStruct.TrigAuto = LL_ADC_INJ_TRIG_INDEPENDENT;
+        LL_ADC_INJ_Init(cfg->adc, &ADC_INJ_InitStruct);        
+    }
+
+
     LL_ADC_INJ_SetQueueMode(cfg->adc, LL_ADC_INJ_QUEUE_DISABLE);
     LL_ADC_SetOverSamplingScope(cfg->adc, LL_ADC_OVS_DISABLE);
     LL_ADC_INJ_SetTriggerEdge(cfg->adc, LL_ADC_INJ_TRIG_EXT_RISING);
@@ -59,40 +91,56 @@ static int adc_stm32_init(const struct device *dev)
     __IO uint32_t wait_loop_index;
     wait_loop_index = ((LL_ADC_DELAY_INTERNAL_REGUL_STAB_US * (SystemCoreClock / (100000 * 2))) / 10);
     while(wait_loop_index != 0) { wait_loop_index--; }
-
-    LL_ADC_REG_SetSequencerRanks(cfg->adc, LL_ADC_REG_RANK_1, LL_ADC_CHANNEL_3);
-    LL_ADC_SetChannelSamplingTime(cfg->adc, LL_ADC_CHANNEL_3, LL_ADC_SAMPLINGTIME_1CYCLE_5);
-    LL_ADC_SetChannelSingleDiff(cfg->adc, LL_ADC_CHANNEL_3, LL_ADC_SINGLE_ENDED);
-    LL_ADC_SetChannelPreselection(cfg->adc, LL_ADC_CHANNEL_3);
-
-    LL_ADC_INJ_SetSequencerRanks(cfg->adc, LL_ADC_INJ_RANK_1, LL_ADC_CHANNEL_14);
-    LL_ADC_SetChannelSamplingTime(cfg->adc, LL_ADC_CHANNEL_14, LL_ADC_SAMPLINGTIME_1CYCLE_5);
-    LL_ADC_SetChannelSingleDiff(cfg->adc, LL_ADC_CHANNEL_14, LL_ADC_SINGLE_ENDED);
-
-    LL_ADC_INJ_SetSequencerRanks(cfg->adc, LL_ADC_INJ_RANK_2, LL_ADC_CHANNEL_16);
-    LL_ADC_SetChannelSamplingTime(cfg->adc, LL_ADC_CHANNEL_16, LL_ADC_SAMPLINGTIME_1CYCLE_5);
-    LL_ADC_SetChannelSingleDiff(cfg->adc, LL_ADC_CHANNEL_16, LL_ADC_SINGLE_ENDED);
-
-    LL_ADC_INJ_SetSequencerRanks(cfg->adc, LL_ADC_INJ_RANK_3, LL_ADC_CHANNEL_17);
-    LL_ADC_SetChannelSamplingTime(cfg->adc, LL_ADC_CHANNEL_17, LL_ADC_SAMPLINGTIME_1CYCLE_5);
-    LL_ADC_SetChannelSingleDiff(cfg->adc, LL_ADC_CHANNEL_17, LL_ADC_SINGLE_ENDED);
-
-    // IRQ_CONNECT(DT_IRQN(DT_NODELABEL(adc1)),
-    //             DT_IRQ(DT_NODELABEL(adc1), priority),
-    //             adc_isr, NULL, 0);
-    // irq_enable(DT_IRQN(DT_NODELABEL(adc1)));
-    // 通过 currsmp1 的父节点（adc1）配置中断
-    // IRQ_CONNECT(DT_IRQN(DT_PARENT(DT_NODELABEL(currsmp1))),  // 获取父节点 adc1 的中断号
-    //           DT_IRQ(DT_PARENT(DT_NODELABEL(currsmp1)), priority),  // 获取父节点中断优先级
-    //           adc_isr, NULL, 0);
-    // irq_enable(DT_IRQN(DT_PARENT(DT_NODELABEL(currsmp1))));
+    if(!cfg->slave_mode_flag)
+    {
+        LL_ADC_REG_SetSequencerRanks(cfg->adc, LL_ADC_REG_RANK_1, LL_ADC_CHANNEL_3);
+        LL_ADC_SetChannelSamplingTime(cfg->adc, LL_ADC_CHANNEL_3, LL_ADC_SAMPLINGTIME_1CYCLE_5);
+        LL_ADC_SetChannelSingleDiff(cfg->adc, LL_ADC_CHANNEL_3, LL_ADC_SINGLE_ENDED);
+        LL_ADC_SetChannelPreselection(cfg->adc, LL_ADC_CHANNEL_3);
     
-    // 方法二：通过实例化宏获取父节点中断
-    IRQ_CONNECT(DT_IRQN(DT_INST_PARENT(0)),          // 获取实例0的父节点（adc1）中断号
-                DT_IRQ(DT_INST_PARENT(0), priority), // 获取中断优先级
-                adc_isr, NULL, 0);
-    irq_enable(DT_IRQN(DT_INST_PARENT(0)));    
-    adc1_start();
+        LL_ADC_INJ_SetSequencerRanks(cfg->adc, LL_ADC_INJ_RANK_1, LL_ADC_CHANNEL_14);
+        LL_ADC_SetChannelSamplingTime(cfg->adc, LL_ADC_CHANNEL_14, LL_ADC_SAMPLINGTIME_1CYCLE_5);
+        LL_ADC_SetChannelSingleDiff(cfg->adc, LL_ADC_CHANNEL_14, LL_ADC_SINGLE_ENDED);
+    
+        LL_ADC_INJ_SetSequencerRanks(cfg->adc, LL_ADC_INJ_RANK_2, LL_ADC_CHANNEL_16);
+        LL_ADC_SetChannelSamplingTime(cfg->adc, LL_ADC_CHANNEL_16, LL_ADC_SAMPLINGTIME_1CYCLE_5);
+        LL_ADC_SetChannelSingleDiff(cfg->adc, LL_ADC_CHANNEL_16, LL_ADC_SINGLE_ENDED);
+    
+        LL_ADC_INJ_SetSequencerRanks(cfg->adc, LL_ADC_INJ_RANK_3, LL_ADC_CHANNEL_17);
+        LL_ADC_SetChannelSamplingTime(cfg->adc, LL_ADC_CHANNEL_17, LL_ADC_SAMPLINGTIME_1CYCLE_5);
+        LL_ADC_SetChannelSingleDiff(cfg->adc, LL_ADC_CHANNEL_17, LL_ADC_SINGLE_ENDED);    
+    }else{
+        LL_ADC_REG_SetSequencerRanks(cfg->adc, LL_ADC_REG_RANK_1, LL_ADC_CHANNEL_15);
+        LL_ADC_SetChannelSamplingTime(cfg->adc, LL_ADC_CHANNEL_15, LL_ADC_SAMPLINGTIME_1CYCLE_5);
+        LL_ADC_SetChannelSingleDiff(cfg->adc, LL_ADC_CHANNEL_15, LL_ADC_SINGLE_ENDED);
+        LL_ADC_SetChannelPreselection(cfg->adc, LL_ADC_CHANNEL_15);
+      
+        LL_ADC_INJ_SetSequencerRanks(cfg->adc, LL_ADC_INJ_RANK_1, LL_ADC_CHANNEL_8);
+        LL_ADC_SetChannelSamplingTime(cfg->adc, LL_ADC_CHANNEL_8, LL_ADC_SAMPLINGTIME_1CYCLE_5);
+        LL_ADC_SetChannelSingleDiff(cfg->adc, LL_ADC_CHANNEL_8, LL_ADC_SINGLE_ENDED);
+      
+        LL_ADC_INJ_SetSequencerRanks(cfg->adc, LL_ADC_INJ_RANK_2, LL_ADC_CHANNEL_9);
+        LL_ADC_SetChannelSamplingTime(cfg->adc, LL_ADC_CHANNEL_9, LL_ADC_SAMPLINGTIME_1CYCLE_5);
+        LL_ADC_SetChannelSingleDiff(cfg->adc, LL_ADC_CHANNEL_9, LL_ADC_SINGLE_ENDED);
+      
+        LL_ADC_INJ_SetSequencerRanks(cfg->adc, LL_ADC_INJ_RANK_3, LL_ADC_CHANNEL_5);
+        LL_ADC_SetChannelSamplingTime(cfg->adc, LL_ADC_CHANNEL_5, LL_ADC_SAMPLINGTIME_1CYCLE_5);
+        LL_ADC_SetChannelSingleDiff(cfg->adc, LL_ADC_CHANNEL_5, LL_ADC_SINGLE_ENDED);        
+    }
+
+    if(!cfg->slave_mode_flag)
+    {
+        if (cfg->irq_cfg_func != NULL) {
+            cfg->irq_cfg_func();
+        }
+        LL_ADC_Disable(cfg->adc);
+        LL_ADC_StartCalibration(cfg->adc,LL_ADC_CALIB_OFFSET,LL_ADC_SINGLE_ENDED);
+        while (LL_ADC_IsCalibrationOnGoing(cfg->adc));
+        LL_ADC_Enable(cfg->adc);
+        while (LL_ADC_IsActiveFlag_ADRDY(cfg->adc) == 0);
+        LL_ADC_EnableIT_JEOS(cfg->adc);
+        LL_ADC_INJ_StartConversion(cfg->adc);        
+    }
 
     return 0;
 }
@@ -124,21 +172,33 @@ static int adc_stm32_init(const struct device *dev)
 		irq_enable(DT_IRQN(DT_INST_PARENT(n)));		\
 	}
 
+/* only generate isr code once */
 #define GENERATE_ISR(n)							\
 	COND_CODE_1(IS_EQ(n, FIRST_WITH_IRQN(n)), (GENERATE_ISR_CODE(n)), (EMPTY))
 
 DT_INST_FOREACH_STATUS_OKAY(GENERATE_ISR)
 
+#define CURRSMP_SHUNT_STM32_IRQ_FUNC(n)                                                                  \
+	.irq_cfg_func = COND_CODE_1(IS_EQ(n, FIRST_WITH_IRQN(n)),                          \
+				    (UTIL_CAT(ISR_FUNC(n), _init)), (NULL)),
 
+#define CURRSMP_SHUNT_STM32_CURRSMP_SHUNT_INIT(n)			\
+									\
+	PINCTRL_DT_INST_DEFINE(n);					\
+	static const struct currsmp_shunt_stm32_config currsmp_shunt_stm32_config_##n = { \
+		.adc = (ADC_TypeDef *)DT_REG_ADDR(DT_INST_PARENT(n)),	\
+		.pclken = STM32_CLOCK_INFO(0, DT_INST_PARENT(n)),	\
+		.pcfg = PINCTRL_DT_INST_DEV_CONFIG_GET(n),		\
+        .slave_mode_flag = DT_INST_PROP(n, adc_slave),\
+		CURRSMP_SHUNT_STM32_IRQ_FUNC(n)			\
+	};								\
+									\
+	DEVICE_DT_INST_DEFINE(n, &currsmp_shunt_stm32_init,\
+                  NULL,	\
+			      NULL, \
+			      &currsmp_shunt_stm32_config_##n,\
+			      POST_KERNEL,\
+			      70, \
+			      NULL);
 
-// 实例化驱动宏
-#define CURRSMP_SHUNT_STM32_CURRSMP_SHUNT_INIT(n) \
-    PINCTRL_DT_INST_DEFINE(n); \
-    static const struct currsmp_shunt_stm32_config currsmp_shunt_stm32_config_##n = { \
-        .adc = (ADC_TypeDef *)DT_REG_ADDR(DT_INST_PARENT(n)), \
-        .pcfg = PINCTRL_DT_INST_DEV_CONFIG_GET(n), \
-    }; \
-    DEVICE_DT_INST_DEFINE(n, adc_stm32_init, NULL, NULL, \
-        &currsmp_shunt_stm32_config_##n, POST_KERNEL, 70, NULL);
-// 为所有状态为 "okay" 的实例生成设备
 DT_INST_FOREACH_STATUS_OKAY(CURRSMP_SHUNT_STM32_CURRSMP_SHUNT_INIT)

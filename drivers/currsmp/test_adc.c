@@ -256,22 +256,16 @@ void MX_ADC2_Init(void)
 /* USER CODE BEGIN 1 */
 void adc1_start(void)
 {
-  LL_ADC_Disable(ADC1);
-  LL_ADC_StartCalibration(ADC1,LL_ADC_CALIB_OFFSET,LL_ADC_SINGLE_ENDED);
-  while (LL_ADC_IsCalibrationOnGoing(ADC1));
+
   LL_ADC_Disable(ADC2);
   LL_ADC_StartCalibration(ADC2,LL_ADC_CALIB_OFFSET,LL_ADC_SINGLE_ENDED);
   while (LL_ADC_IsCalibrationOnGoing(ADC2));
 
-  LL_ADC_Enable(ADC1);
-  LL_ADC_Enable(ADC2);
-  while (LL_ADC_IsActiveFlag_ADRDY(ADC1) == 0);
-  while (LL_ADC_IsActiveFlag_ADRDY(ADC2) == 0);
+   LL_ADC_Enable(ADC2);
+   while (LL_ADC_IsActiveFlag_ADRDY(ADC2) == 0);
 
-  LL_ADC_EnableIT_JEOS(ADC1);
   LL_ADC_DisableIT_JEOS(ADC2);
 
-  LL_ADC_INJ_StartConversion(ADC1);
   printf("adc init finish\r\n");
 
 
@@ -290,11 +284,10 @@ uint16_t adc_inj_data[6];
 void ADC_IRQHandler(void)
 {
   /* USER CODE BEGIN ADC_IRQn 0 */
-
-  LL_GPIO_TogglePin(GPIOE,LL_GPIO_PIN_1);
+  LL_GPIO_TogglePin(GPIOE,LL_GPIO_PIN_1); 
 
   if (LL_ADC_IsActiveFlag_JEOS(ADC1)) 
-  {    
+  {   
     LL_ADC_ClearFlag_JEOS(ADC1);
     adc_inj_data[0] = LL_ADC_INJ_ReadConversionData12(ADC1, LL_ADC_INJ_RANK_1);
     adc_inj_data[1] = LL_ADC_INJ_ReadConversionData12(ADC1, LL_ADC_INJ_RANK_2);
@@ -303,7 +296,6 @@ void ADC_IRQHandler(void)
   }
   if (LL_ADC_IsActiveFlag_JEOS(ADC2)) {
     LL_ADC_ClearFlag_JEOS(ADC2);
-
     adc_inj_data[3] = LL_ADC_INJ_ReadConversionData12(ADC2, LL_ADC_INJ_RANK_1);
     adc_inj_data[4] = LL_ADC_INJ_ReadConversionData12(ADC2, LL_ADC_INJ_RANK_2);
     adc_inj_data[5] = LL_ADC_INJ_ReadConversionData12(ADC2, LL_ADC_INJ_RANK_3);

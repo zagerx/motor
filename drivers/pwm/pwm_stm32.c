@@ -25,30 +25,6 @@ struct pwm_driver_api {
 				   float ua, float ub, float uc);
 };
 
-void tim1_enable(void)
-{
-  LL_TIM_EnableAllOutputs(TIM8);
-  LL_TIM_CC_EnableChannel(TIM8, LL_TIM_CHANNEL_CH1 | LL_TIM_CHANNEL_CH2 | LL_TIM_CHANNEL_CH3);
-
-  LL_TIM_EnableAllOutputs(TIM1);
-  LL_TIM_CC_EnableChannel(TIM1, LL_TIM_CHANNEL_CH1 | LL_TIM_CHANNEL_CH2 | LL_TIM_CHANNEL_CH3 |\
-                                LL_TIM_CHANNEL_CH1N| LL_TIM_CHANNEL_CH1N| LL_TIM_CHANNEL_CH1N);  
-  LL_TIM_CC_EnableChannel(TIM1,LL_TIM_CHANNEL_CH4);
-  LL_TIM_EnableCounter(TIM1);
-}
-
-void tim1_set_pwm(float _a, float _b, float _c)
-{
-	uint16_t _ARR = 13750;
-    LL_TIM_OC_SetCompareCH1(TIM1, (uint32_t)(_ARR/2-1));
-    LL_TIM_OC_SetCompareCH2(TIM1, (uint32_t)(_ARR/2-1));
-    LL_TIM_OC_SetCompareCH3(TIM1, (uint32_t)(_ARR/2-1));
-    LL_TIM_OC_SetCompareCH4(TIM1, (uint32_t)(_ARR/2-1));
-    LL_TIM_OC_SetCompareCH1(TIM8, (uint32_t)(_ARR/2-1));
-    LL_TIM_OC_SetCompareCH2(TIM8, (uint32_t)(_ARR/2-1));
-    LL_TIM_OC_SetCompareCH3(TIM8, (uint32_t)(_ARR/2-1));    
-}
-
 static void pwm_stm32_stop(const struct device *dev)
 {
 	const struct pwm_stm32_config *cfg = dev->config;

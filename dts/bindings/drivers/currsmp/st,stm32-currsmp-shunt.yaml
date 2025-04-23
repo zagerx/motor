@@ -60,3 +60,9 @@ properties:
       must be an output of the timer used for SV-PWM.
 
       Definitions available at dts-bindings/adc/stm32fxxx.h files.
+  adc-slave:
+    type: int
+    required: false
+    description: |
+      Timer slave mode flag, default 0 (master mode)
+
