@@ -8,6 +8,8 @@
 #include <zephyr/drivers/clock_control/stm32_clock_control.h>
 
 #include <zephyr/logging/log.h>
+
+#include <drivers/pwm.h>
 LOG_MODULE_REGISTER(pwm_stm32, LOG_LEVEL_DBG);
 
 #define DT_DRV_COMPAT st_stm32_pwm_custom
@@ -18,12 +20,12 @@ struct pwm_stm32_config {
     uint32_t timing_params[3];  // [0]=t_dead_ns, [1]=arr, [2]=psc
     uint32_t slave_enable;
 };
-struct pwm_driver_api {
-	void (*start)(const struct device *dev);
-	void (*stop)(const struct device *dev);
-	void (*set_phase_voltages)(const struct device *dev,
-				   float ua, float ub, float uc);
-};
+// struct pwm_driver_api {
+// 	void (*start)(const struct device *dev);
+// 	void (*stop)(const struct device *dev);
+// 	void (*set_phase_voltages)(const struct device *dev,
+// 				   float ua, float ub, float uc);
+// };
 
 static void pwm_stm32_stop(const struct device *dev)
 {
@@ -62,7 +64,7 @@ static void pwm_stm32_setduties(const struct device *dev,float a,float b,float c
     LL_TIM_OC_SetCompareCH2(cfg->timer, (uint32_t)(cfg->timing_params[1]*b));
     LL_TIM_OC_SetCompareCH3(cfg->timer, (uint32_t)(cfg->timing_params[1]*c));
 
-    LL_TIM_OC_SetCompareCH4(cfg->timer, (uint32_t)(200)); //TODO
+    LL_TIM_OC_SetCompareCH4(cfg->timer, (uint32_t)(cfg->timing_params[1]-200)); //TODO
 }
 /*==========================================================================================
  * @brief        配置PWM频率、对应通道
@@ -183,7 +185,7 @@ static int pwm_stm32_init(const struct device *dev)
         NULL, NULL, \
         &pwm_stm32_config_##n, \
         POST_KERNEL, \
-        CONFIG_KERNEL_INIT_PRIORITY_DEVICE, \
+        80, \
         &pwm_stm32_api_##n);
 
 DT_INST_FOREACH_STATUS_OKAY(PMW_STM32_INIT)

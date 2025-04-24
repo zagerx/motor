@@ -6,6 +6,10 @@
 #include <zephyr/drivers/pinctrl.h>
 #include <zephyr/drivers/clock_control/stm32_clock_control.h>
 #include <zephyr/logging/log.h>
+
+
+#include <stm32h7xx_ll_gpio.h>//TODO
+#include <drivers/currsmp.h>
 LOG_MODULE_REGISTER(currsmp_shunt_stm32, LOG_LEVEL_DBG);
 #define DT_DRV_COMPAT st_stm32_currsmp_shunt
 struct currsmp_shunt_stm32_config {
@@ -15,24 +19,72 @@ struct currsmp_shunt_stm32_config {
     uint32_t slave_mode_flag;
     void (*irq_cfg_func)(void);
 };
-extern void ADC_IRQHandler(void);
+struct currsmp_shunt_stm32_data {
+	currsmp_regulation_cb_t regulation_cb;
+	void *regulation_ctx;
+	uint32_t adc_channl_a;
+	uint32_t adc_channl_b;
+	uint32_t adc_channl_c;
+};
+
+
 static void adc_stm32_isr(const struct device *dev)
 {
-    ADC_IRQHandler();
+    const struct currsmp_shunt_stm32_config* cfg = dev->config;
+    struct currsmp_shunt_stm32_data* data = dev->data;
+    if (LL_ADC_IsActiveFlag_JEOS(cfg->adc)) 
+    {   
+      LL_GPIO_TogglePin(GPIOE,LL_GPIO_PIN_1);
+      LL_ADC_ClearFlag_JEOS(cfg->adc);
+    //   data->adc_channl_a = LL_ADC_INJ_ReadConversionData12(cfg->adc, LL_ADC_INJ_RANK_1);
+    //   data->adc_channl_b = LL_ADC_INJ_ReadConversionData12(cfg->adc, LL_ADC_INJ_RANK_2);
+    //   data->adc_channl_c = LL_ADC_INJ_ReadConversionData12(cfg->adc, LL_ADC_INJ_RANK_3);
+      
+      if(data->regulation_cb)
+      {
+        data->regulation_cb(data->regulation_ctx);
+      }
+    }
 }
 
-void adc1_start(void);
+
+static void currsmp_shunt_stm32_configure(const struct device *dev,
+					  currsmp_regulation_cb_t regulation_cb,
+					  void *ctx)
+{
+	struct currsmp_shunt_stm32_data *data = dev->data;
+
+	data->regulation_cb = regulation_cb;
+	data->regulation_ctx = ctx;
+}
+
+static void currsmp_shunt_stm32_get_currents(const struct device *dev,
+					     struct currsmp_curr *curr)
+{
+	const struct currsmp_shunt_stm32_config *cfg = dev->config;
+	struct currsmp_shunt_stm32_data *data = dev->data;
+     
+    data->adc_channl_a = LL_ADC_INJ_ReadConversionData12(cfg->adc, LL_ADC_INJ_RANK_1);
+    data->adc_channl_b = LL_ADC_INJ_ReadConversionData12(cfg->adc, LL_ADC_INJ_RANK_2);
+    data->adc_channl_c = LL_ADC_INJ_ReadConversionData12(cfg->adc, LL_ADC_INJ_RANK_3);
+
+	curr->i_a = (float)data->adc_channl_a / (2048);
+	curr->i_b = (float)data->adc_channl_a / (2048);
+	curr->i_c = (float)data->adc_channl_a / (2048);
+}
+
+
+
+static const struct currsmp_driver_api currsmp_shunt_stm32_driver_api = {
+	.configure = currsmp_shunt_stm32_configure,
+	.get_currents = currsmp_shunt_stm32_get_currents,
+};
+
 
 static int currsmp_shunt_stm32_init(const struct device *dev)
 {
     const struct currsmp_shunt_stm32_config *cfg = dev->config;
     int ret;
-
-    if(cfg->slave_mode_flag)
-    {
-        LOG_INF("adc----->cfg->name:%s",dev->name);
-        return 1;
-    }
 
     const struct device *clk;
 	clk = DEVICE_DT_GET(STM32_CLOCK_CONTROL_NODE);
@@ -109,6 +161,10 @@ static int currsmp_shunt_stm32_init(const struct device *dev)
         LL_ADC_INJ_SetSequencerRanks(cfg->adc, LL_ADC_INJ_RANK_3, LL_ADC_CHANNEL_17);
         LL_ADC_SetChannelSamplingTime(cfg->adc, LL_ADC_CHANNEL_17, LL_ADC_SAMPLINGTIME_1CYCLE_5);
         LL_ADC_SetChannelSingleDiff(cfg->adc, LL_ADC_CHANNEL_17, LL_ADC_SINGLE_ENDED);    
+
+        LL_ADC_SetChannelPreselection(ADC1,LL_ADC_CHANNEL_14);
+        LL_ADC_SetChannelPreselection(ADC1,LL_ADC_CHANNEL_16);
+        LL_ADC_SetChannelPreselection(ADC1,LL_ADC_CHANNEL_17);        
     }else{
         LL_ADC_REG_SetSequencerRanks(cfg->adc, LL_ADC_REG_RANK_1, LL_ADC_CHANNEL_15);
         LL_ADC_SetChannelSamplingTime(cfg->adc, LL_ADC_CHANNEL_15, LL_ADC_SAMPLINGTIME_1CYCLE_5);
@@ -125,7 +181,12 @@ static int currsmp_shunt_stm32_init(const struct device *dev)
       
         LL_ADC_INJ_SetSequencerRanks(cfg->adc, LL_ADC_INJ_RANK_3, LL_ADC_CHANNEL_5);
         LL_ADC_SetChannelSamplingTime(cfg->adc, LL_ADC_CHANNEL_5, LL_ADC_SAMPLINGTIME_1CYCLE_5);
-        LL_ADC_SetChannelSingleDiff(cfg->adc, LL_ADC_CHANNEL_5, LL_ADC_SINGLE_ENDED);        
+        LL_ADC_SetChannelSingleDiff(cfg->adc, LL_ADC_CHANNEL_5, LL_ADC_SINGLE_ENDED);       
+        
+        LL_ADC_SetChannelPreselection(ADC2,LL_ADC_CHANNEL_8);
+        LL_ADC_SetChannelPreselection(ADC2,LL_ADC_CHANNEL_9);
+        LL_ADC_SetChannelPreselection(ADC2,LL_ADC_CHANNEL_5);
+              
     }
 
     if(!cfg->slave_mode_flag)
@@ -140,6 +201,13 @@ static int currsmp_shunt_stm32_init(const struct device *dev)
         while (LL_ADC_IsActiveFlag_ADRDY(cfg->adc) == 0);
         LL_ADC_EnableIT_JEOS(cfg->adc);
         LL_ADC_INJ_StartConversion(cfg->adc);        
+    }else{
+        LL_ADC_Disable(ADC2);
+        LL_ADC_StartCalibration(ADC2,LL_ADC_CALIB_OFFSET,LL_ADC_SINGLE_ENDED);
+        while (LL_ADC_IsCalibrationOnGoing(ADC2));      
+         LL_ADC_Enable(ADC2);
+         while (LL_ADC_IsActiveFlag_ADRDY(ADC2) == 0);      
+        LL_ADC_DisableIT_JEOS(ADC2);        
     }
 
     return 0;
@@ -193,12 +261,14 @@ DT_INST_FOREACH_STATUS_OKAY(GENERATE_ISR)
 		CURRSMP_SHUNT_STM32_IRQ_FUNC(n)			\
 	};								\
 									\
+    static struct currsmp_shunt_stm32_data currsmp_shunt_stm32_data_##n; \
+                                    \
 	DEVICE_DT_INST_DEFINE(n, &currsmp_shunt_stm32_init,\
                   NULL,	\
-			      NULL, \
+			      &currsmp_shunt_stm32_data_##n,\
 			      &currsmp_shunt_stm32_config_##n,\
 			      POST_KERNEL,\
 			      70, \
-			      NULL);
+			      &currsmp_shunt_stm32_driver_api);
 
 DT_INST_FOREACH_STATUS_OKAY(CURRSMP_SHUNT_STM32_CURRSMP_SHUNT_INIT)

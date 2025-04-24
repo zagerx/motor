@@ -156,7 +156,16 @@
 	};
 };
 
-
+&adc2 {
+	currsmp2: currsmp {
+		compatible = "st,stm32-currsmp-shunt";
+		pinctrl-0 = <&adc2_inp8_pc5  &adc2_inp9_pb0 &adc2_inp5_pb1>;
+		pinctrl-names = "default";
+		adc-channels = <8 9 5>;
+		adc-slave = <1>;
+		status = "okay";
+	};
+};
 
 &backup_sram {
 	status = "okay";

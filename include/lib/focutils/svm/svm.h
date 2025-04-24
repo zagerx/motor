@@ -7,8 +7,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef _SPINNER_LIB_SVM_SVM_H_
-#define _SPINNER_LIB_SVM_SVM_H_
+#ifndef __LIB_SVM_SVM_H_
+#define __LIB_SVM_SVM_H_
 
 #include <stdint.h>
 

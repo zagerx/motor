@@ -1,15 +1,25 @@
 #include "zephyr/device.h"
 
+
+
+#include <drivers/currsmp.h>
+#include <lib/foc/foc.h>
 #define DT_DRV_COMPAT bldc_motor
 
 
 struct motor_config{
     const struct device *pwm;
+    const struct device *currsmp;
     const struct device *ctrl_algo;
 };
 
 static int motor_init(const struct device* dev)
 {
+
+    // const struct motor_config *cfg = dev->config;
+    // const struct device *foc = cfg->ctrl_algo;
+    // const struct foc_api *api = foc->api;
+    // currsmp_configure(dev->config,api->curr_regulator,);
     return 0;
 } 
 

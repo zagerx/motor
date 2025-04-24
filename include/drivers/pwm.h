@@ -21,13 +21,13 @@
  
  /** @cond INTERNAL_HIDDEN */
  
-//  struct pwm_driver_api {
-//      void (*start)(const struct device *dev);
-//      void (*stop)(const struct device *dev);
-//      void (*set_phase_voltages)(const struct device *dev,
-//                     float ua, float ub, float uc);
-//      void (*set_phase_state)(const struct device *dev)
-// };
+ struct pwm_driver_api {
+     void (*start)(const struct device *dev);
+     void (*stop)(const struct device *dev);
+     void (*set_phase_voltages)(const struct device *dev,
+                    float ua, float ub, float uc);
+    //  void (*set_phase_state)(const struct device *dev)
+};
  
  /** @endcond */
  
@@ -39,24 +39,24 @@
   *
   * @param[in] dev SV-PWM device.
   */
-//  static inline void svpwm_start(const struct device *dev)
-//  {
-//      const struct svpwm_driver_api *api = dev->api;
+ static inline void pwm_start(const struct device *dev)
+ {
+     const struct pwm_driver_api *api = dev->api;
  
-//      api->start(dev);
-//  }
+     api->start(dev);
+ }
  
  /**
   * @brief Stop the SV-PWM controller.
   *
   * @param[in] dev SV-PWM device.
   */
-//  static inline void svpwm_stop(const struct device *dev)
-//  {
-//      const struct svpwm_driver_api *api = dev->api;
+ static inline void pwm_stop(const struct device *dev)
+ {
+     const struct pwm_driver_api *api = dev->api;
  
-//      api->stop(dev);
-//  }
+     api->stop(dev);
+ }
  
  /**
   * @brief Set phase voltages.
@@ -65,18 +65,18 @@
   * @param[in] v_alpha Alpha voltage.
   * @param[in] v_beta Beta voltage.
   */
-//  static inline void svpwm_set_phase_voltages(const struct device *dev,
-//                          float ua, float ub, float uc)
-//  {
-//      float a, b, c;
-//      const struct svpwm_driver_api *api = dev->api;
+ static inline void pwm_set_phase_voltages(const struct device *dev,
+                         float ua, float ub, float uc)
+ {
+    //  float a, b, c;
+     const struct pwm_driver_api *api = dev->api;
  
-//      /* normalization */
-//      a = (ua + 1.0f) * 0.5f;
-//      b = (ub + 1.0f) * 0.5f;
-//      c = (uc + 1.0f) * 0.5f;
-//      api->set_phase_voltages(dev, a, b, c);
-//  }
+     /* normalization */
+    //  a = (ua + 1.0f) * 0.5f;
+    //  b = (ub + 1.0f) * 0.5f;
+    //  c = (uc + 1.0f) * 0.5f;
+     api->set_phase_voltages(dev, ua, ub, uc);
+ }
  
 //  static inline void svpwm_set_phase_state(const struct device *dev)
 //  {

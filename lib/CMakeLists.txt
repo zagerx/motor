@@ -4,5 +4,6 @@
 #add_subdirectory(control)
 #add_subdirectory(svm)
 #add_subdirectory(utils)
-add_subdirectory(bldcmotor)
+#add_subdirectory(bldcmotor)
 add_subdirectory(foc)
+add_subdirectory(focutils)
