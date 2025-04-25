@@ -31,15 +31,18 @@
 			gpios = <&gpioe 1 GPIO_ACTIVE_HIGH>;
 			label = "User LD1";
 		};
-		yellow_led: led_1 {
-			gpios = <&gpioe 0 GPIO_ACTIVE_HIGH>;
+		mot12_brk_pin: led_1 {
+			gpios = <&gpiob 3 GPIO_ACTIVE_HIGH>;
 			label = "User LD2";
 		};
+		encoder_vcc: led_2 {
+			gpios = <&gpiod 3 GPIO_ACTIVE_HIGH>;
+			label = "User LD2";
+		};		
 	};
 
 	aliases {
 		led0 = &green_led;
-		led1 = &yellow_led;
 	};
 
     motors {
@@ -145,6 +148,32 @@
         status = "okay";
     };
 };
+
+&timers3 {
+	abz1: feedback {
+		compatible = "st,stm32-abz";
+
+		pinctrl-0 = <&tim3_ch1_pb4 &tim3_ch2_pb5>;
+		pinctrl-names = "default";
+		lines = <4096>;
+		pole-pairs = <15>;
+		status = "okay";
+	};
+};
+
+&timers4 {
+	abz2: feedback {
+		compatible = "st,stm32-abz";
+
+		pinctrl-0 = <&tim4_ch1_pb6 &tim4_ch2_pb7>;
+		pinctrl-names = "default";
+		lines = <4096>;
+		pole-pairs = <15>;
+		status = "okay";
+	};
+};
+
+
 &adc1 {
 	currsmp1: currsmp {
 		compatible = "st,stm32-currsmp-shunt";

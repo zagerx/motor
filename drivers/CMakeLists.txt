@@ -9,3 +9,4 @@
 
 add_subdirectory(currsmp)
 add_subdirectory(pwm)
+add_subdirectory(feedback)

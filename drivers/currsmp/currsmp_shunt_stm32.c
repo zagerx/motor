@@ -162,9 +162,9 @@ static int currsmp_shunt_stm32_init(const struct device *dev)
         LL_ADC_SetChannelSamplingTime(cfg->adc, LL_ADC_CHANNEL_17, LL_ADC_SAMPLINGTIME_1CYCLE_5);
         LL_ADC_SetChannelSingleDiff(cfg->adc, LL_ADC_CHANNEL_17, LL_ADC_SINGLE_ENDED);    
 
-        LL_ADC_SetChannelPreselection(ADC1,LL_ADC_CHANNEL_14);
-        LL_ADC_SetChannelPreselection(ADC1,LL_ADC_CHANNEL_16);
-        LL_ADC_SetChannelPreselection(ADC1,LL_ADC_CHANNEL_17);        
+        LL_ADC_SetChannelPreselection(cfg->adc,LL_ADC_CHANNEL_14);
+        LL_ADC_SetChannelPreselection(cfg->adc,LL_ADC_CHANNEL_16);
+        LL_ADC_SetChannelPreselection(cfg->adc,LL_ADC_CHANNEL_17);        
     }else{
         LL_ADC_REG_SetSequencerRanks(cfg->adc, LL_ADC_REG_RANK_1, LL_ADC_CHANNEL_15);
         LL_ADC_SetChannelSamplingTime(cfg->adc, LL_ADC_CHANNEL_15, LL_ADC_SAMPLINGTIME_1CYCLE_5);
@@ -183,10 +183,9 @@ static int currsmp_shunt_stm32_init(const struct device *dev)
         LL_ADC_SetChannelSamplingTime(cfg->adc, LL_ADC_CHANNEL_5, LL_ADC_SAMPLINGTIME_1CYCLE_5);
         LL_ADC_SetChannelSingleDiff(cfg->adc, LL_ADC_CHANNEL_5, LL_ADC_SINGLE_ENDED);       
         
-        LL_ADC_SetChannelPreselection(ADC2,LL_ADC_CHANNEL_8);
-        LL_ADC_SetChannelPreselection(ADC2,LL_ADC_CHANNEL_9);
-        LL_ADC_SetChannelPreselection(ADC2,LL_ADC_CHANNEL_5);
-              
+        LL_ADC_SetChannelPreselection(cfg->adc,LL_ADC_CHANNEL_8);
+        LL_ADC_SetChannelPreselection(cfg->adc,LL_ADC_CHANNEL_9);
+        LL_ADC_SetChannelPreselection(cfg->adc,LL_ADC_CHANNEL_5);
     }
 
     if(!cfg->slave_mode_flag)
@@ -200,13 +199,13 @@ static int currsmp_shunt_stm32_init(const struct device *dev)
         LL_ADC_Enable(cfg->adc);
         while (LL_ADC_IsActiveFlag_ADRDY(cfg->adc) == 0);
         LL_ADC_EnableIT_JEOS(cfg->adc);
-        LL_ADC_INJ_StartConversion(cfg->adc);        
+        LL_ADC_INJ_StartConversion(cfg->adc);
     }else{
-        LL_ADC_Disable(ADC2);
-        LL_ADC_StartCalibration(ADC2,LL_ADC_CALIB_OFFSET,LL_ADC_SINGLE_ENDED);
-        while (LL_ADC_IsCalibrationOnGoing(ADC2));      
-         LL_ADC_Enable(ADC2);
-         while (LL_ADC_IsActiveFlag_ADRDY(ADC2) == 0);      
+        LL_ADC_Disable(cfg->adc);
+        LL_ADC_StartCalibration(cfg->adc,LL_ADC_CALIB_OFFSET,LL_ADC_SINGLE_ENDED);
+        while (LL_ADC_IsCalibrationOnGoing(cfg->adc));
+         LL_ADC_Enable(cfg->adc);
+         while (LL_ADC_IsActiveFlag_ADRDY(cfg->adc) == 0);      
         LL_ADC_DisableIT_JEOS(ADC2);        
     }
 

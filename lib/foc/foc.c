@@ -57,7 +57,7 @@ static void foc_curr_regulator(void *ctx)
     struct device *dev = (struct device*)ctx;
     const struct foc_config *cfg = dev->config;
     const struct device *currsmp = cfg->currsmp;
-    struct foc_data *data = dev->data;
+    // struct foc_data *data = dev->data;
 
     struct currsmp_curr current_now;
     currsmp_get_currents(currsmp,&current_now);
