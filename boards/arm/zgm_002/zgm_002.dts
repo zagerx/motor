@@ -65,6 +65,22 @@
 			modulate = <1>;
 		};
 	};
+	hall {
+		hall1:hall1{
+			compatible = "st,stm32-hall";
+			hu-gpios = <&gpiod 1 GPIO_ACTIVE_HIGH>;
+			hv-gpios = <&gpiob 2 GPIO_ACTIVE_HIGH>;
+			hw-gpios = <&gpiod 0 GPIO_ACTIVE_HIGH>;
+			status = "okay";
+		};
+		hall2:hall2{
+			compatible = "st,stm32-hall";
+			hu-gpios = <&gpioc 14 GPIO_ACTIVE_HIGH>;
+			hv-gpios = <&gpioc 15 GPIO_ACTIVE_HIGH>;
+			hw-gpios = <&gpiob 12 GPIO_ACTIVE_HIGH>;
+			status = "okay";
+		};		
+	};
 };
 
 &clk_lsi {

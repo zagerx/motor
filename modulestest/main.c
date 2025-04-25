@@ -32,23 +32,20 @@ static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
 #define MOTOR1_NODE DT_INST(1, foc_ctrl_algo)
 int32_t get_tim3_encoder_count(void);
 int32_t get_tim4_encoder_count(void);
+void hall_init(void);
+
 int main(void)
 {
-	// if (!gpio_is_ready_dt(&led)) {
-	// 	return 0;
-	// }
-
 	const struct gpio_dt_spec mot12_brk = GPIO_DT_SPEC_GET(MOT12_BRK_PIN_NODE, gpios);
     int ret = gpio_pin_configure_dt(&mot12_brk, GPIO_OUTPUT_ACTIVE);
     if (ret < 0) {
         printk("Error %d: Failed to configure brake pin\n", ret);
-        // return;
     }
+    gpio_pin_set(mot12_brk.port, mot12_brk.pin,1);
 	const struct gpio_dt_spec encoder_vcc = GPIO_DT_SPEC_GET(ENCODER_VCC, gpios);
     ret = gpio_pin_configure_dt(&encoder_vcc, GPIO_OUTPUT_ACTIVE);
     if (ret < 0) {
         printk("Error %d: Failed to configure brake pin\n", ret);
-        // return;
     }
 	LOG_INF("main statr");                    // 信息级
 	const struct device *motor0 = DEVICE_DT_GET(MOTOR0_NODE);
@@ -65,12 +62,9 @@ int main(void)
     }
 	foc_start(motor1);	
 
-	gpio_pin_configure_dt(&led, GPIO_OUTPUT_ACTIVE);      
+	gpio_pin_configure_dt(&led, GPIO_OUTPUT_ACTIVE);
+
 	while (1) {
-		int32_t pos3 = get_tim3_encoder_count();
-		int32_t pos4 = get_tim4_encoder_count();
-	
-		printf("TIM3: %d, TIM4: %d\n", pos3, pos4);
 		k_msleep(SLEEP_TIME_MS);
 	}
 	return 0;

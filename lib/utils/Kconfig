@@ -1,6 +1,0 @@
-config SPINNER_UTILS_STM32
-	bool "STM32 utilities"
-	select USE_STM32_LL_RCC
-    select USE_STM32_LL_ADC
-	help
-	  Enable common utilities for STM32 SoCs.

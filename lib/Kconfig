@@ -5,6 +5,6 @@
 
 #rsource "control/Kconfig"
 #rsource "svm/Kconfig"
-rsource "utils/Kconfig"
+#rsource "utils/Kconfig"
 
 #endmenu
