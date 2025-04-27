@@ -50,6 +50,7 @@ static void pwm_stm32_start(const struct device *dev)
 		LL_TIM_EnableCounter(cfg->timer);
 		LL_TIM_CC_EnableChannel(cfg->timer,LL_TIM_CHANNEL_CH4);
 	}else{
+		LOG_INF("Slave timer");
 		LL_TIM_EnableAllOutputs(cfg->timer);	
 	}
 	LL_TIM_CC_EnableChannel(cfg->timer,\

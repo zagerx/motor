@@ -6,6 +6,18 @@ description: Motor Control Algorithm
 compatible: "foc-ctrl-algo"
 
 properties:
+  currsmp:
+    type: phandle
+    required: true
+    description: FOC SVPWM 
+  feedback:    
+    type: phandle
+    required: false
+    description: FOC SVPWM out          
+  pwm:
+    type: phandle
+    required: true
+    description: FOC SVPWM out  
   modulate:
     type: int
     required: true

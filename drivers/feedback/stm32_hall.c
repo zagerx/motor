@@ -21,8 +21,12 @@
  struct hall_stm32_data {
      struct gpio_callback gpio_cb;
      const struct device *dev;  // 添加设备指针
- };
- 
+     int8_t cur_sect;
+     int8_t pre_sect;
+};
+struct stm32_hall_driver_api {
+	int8_t (*get_sect)(const struct device *dev);
+}; 
  static void hall_gpio_callback(const struct device *port,
                               struct gpio_callback *cb,
                               uint32_t pins)
@@ -40,8 +44,19 @@
      int hw_state = gpio_pin_get_dt(&cfg->hw_gpio);
      LOG_DBG("Hall states - HALL_VAL:%d", hu_state<<2|hv_state<<1|hw_state);
 
+     data->pre_sect = data->cur_sect;
+     data->cur_sect = hu_state<<2|hv_state<<1|hw_state;
  }
- 
+
+static int8_t hall_get_sect(const struct device *dev)
+{
+   const struct hall_stm32_data *data = dev->data;
+   return data->cur_sect; 
+} 
+static const struct stm32_hall_driver_api hall_stm32_driver_api = {
+    .get_sect =  hall_get_sect,
+};
+
  static int hall_stm32_init(const struct device *dev)
  {
      const struct hall_stm32_config *cfg = dev->config;
@@ -98,6 +113,5 @@
                           &hall_stm32_cfg_##n, \
                           POST_KERNEL, \
                           99, \
-                          NULL);
- 
+                          &hall_stm32_driver_api); 
  DT_INST_FOREACH_STATUS_OKAY(HALL_STM32_INIT)
