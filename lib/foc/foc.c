@@ -8,7 +8,7 @@
 #include <drivers/pwm.h>
 #include <lib/focutils/svm/svm.h>
 #include <lib/focutils/utils/utils.h>
-
+#include <drivers/feedback.h>
 LOG_MODULE_REGISTER(foc, LOG_LEVEL_DBG);
 
 #define DT_DRV_COMPAT foc_ctrl_algo 
@@ -16,6 +16,7 @@ LOG_MODULE_REGISTER(foc, LOG_LEVEL_DBG);
 struct foc_config{
     const struct device *pwm;
     const struct device *currsmp;
+    const struct device *feedback;
     void (*modulate)(svm_t*,float,float);
 };
 
@@ -57,11 +58,11 @@ static void foc_curr_regulator(void *ctx)
     struct device *dev = (struct device*)ctx;
     const struct foc_config *cfg = dev->config;
     const struct device *currsmp = cfg->currsmp;
-    // struct foc_data *data = dev->data;
+    struct foc_data *data = dev->data;
 
     struct currsmp_curr current_now;
     currsmp_get_currents(currsmp,&current_now);
- 	// // data->eangle = feedback_get_eangle(cfg->feedback);
+ 	data->eangle = feedback_get_eangle(cfg->feedback);
     // clarke_f32(current_now.i_a, current_now.i_b, &data->v_alpha, &data->v_beta);
 
     // float sin_val,cos_val;
@@ -89,8 +90,7 @@ static int foc_init(const struct device* dev)
     const struct foc_config *cfg = dev->config;
     const struct device *currsmp = cfg->currsmp;
     currsmp_configure(currsmp,foc_curr_regulator,(void *)dev);
-
-    LOG_INF("foc_init  name %s",dev->name);
+    LOG_INF("foc_init  name :%s",dev->name);
     return 0;
 }
 //todo
@@ -117,6 +117,7 @@ void foc_start(const struct device* dev)
     static const struct foc_config foc_cfg_##n = {\
         .pwm = DEVICE_DT_GET(DT_INST(n, st_stm32_pwm_custom)),\
         .currsmp = DEVICE_DT_GET(DT_INST(n, st_stm32_currsmp_shunt)),\
+        .feedback = DEVICE_DT_GET(DT_INST(n, st_stm32_abz_hall)),\
         .modulate = svm_set,\
     };\
 \

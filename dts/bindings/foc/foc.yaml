@@ -12,7 +12,7 @@ properties:
     description: FOC SVPWM 
   feedback:    
     type: phandle
-    required: false
+    required: true 
     description: FOC SVPWM out          
   pwm:
     type: phandle

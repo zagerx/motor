@@ -50,12 +50,14 @@
 			compatible = "foc-ctrl-algo";
 			currsmp = <&currsmp1>;
 			pwm = <&pwm1>;
+			feedback = <&abz_hall1>;
 			modulate = <1>;
 		};
 		foc2:ctrl_algo2{
 			compatible = "foc-ctrl-algo";
 			currsmp = <&currsmp2>;
 			pwm = <&pwm8>;
+			feedback = <&abz_hall2>;
 			modulate = <1>;
 		};
 	};

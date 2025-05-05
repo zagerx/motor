@@ -57,7 +57,7 @@
   {
 	  return 0.0f;
   }
-  
+
   static float abz_stm32_get_rads(const struct device *dev)
   {
 	  /* fixme: */
@@ -68,7 +68,7 @@
   {
 	  return 0.0f; 
   }
-  
+
   static const struct feedback_driver_api driver_feedback = {
 	  .get_rads = abz_stm32_get_rads,
 	  .get_eangle = abz_stm32_get_eangle,
@@ -141,9 +141,24 @@
 	 LL_TIM_IC_SetPolarity(config->timer, LL_TIM_CHANNEL_CH2, LL_TIM_IC_POLARITY_RISING);
 	 LL_TIM_SetTriggerOutput(config->timer, LL_TIM_TRGO_RESET);
 	 LL_TIM_DisableMasterSlaveMode(config->timer);
-	 LL_TIM_EnableCounter(config->timer);
+	//  LL_TIM_EnableCounter(config->timer);
 	 return 0;
 }
+  static void abz_hall_stm32_enable(const struct device *dev)
+  {
+	const struct abz_hall_stm32_config *cfg = dev;
+	uint8_t ret;
+	LL_TIM_EnableCounter(cfg->timer);
+
+     ret = gpio_pin_interrupt_configure_dt(&cfg->hu_gpio, GPIO_INT_EDGE_BOTH);
+     ret |= gpio_pin_interrupt_configure_dt(&cfg->hv_gpio, GPIO_INT_EDGE_BOTH);
+     ret |= gpio_pin_interrupt_configure_dt(&cfg->hw_gpio, GPIO_INT_EDGE_BOTH);
+
+     if (ret < 0) {
+         LOG_ERR("Failed to configure interrupts");
+     }
+  }
+
 static int hall_stm32_init(const struct device *dev)
 {
      const struct abz_hall_stm32_config *cfg = dev->config;
@@ -175,19 +190,20 @@ static int hall_stm32_init(const struct device *dev)
      }
  
      /* Configure interrupts */
-     ret = gpio_pin_interrupt_configure_dt(&cfg->hu_gpio, GPIO_INT_EDGE_BOTH);
-     ret |= gpio_pin_interrupt_configure_dt(&cfg->hv_gpio, GPIO_INT_EDGE_BOTH);
-     ret |= gpio_pin_interrupt_configure_dt(&cfg->hw_gpio, GPIO_INT_EDGE_BOTH);
-     if (ret < 0) {
-         LOG_ERR("Failed to configure interrupts");
-         return ret;
-     }
+    //  ret = gpio_pin_interrupt_configure_dt(&cfg->hu_gpio, GPIO_INT_EDGE_BOTH);
+    //  ret |= gpio_pin_interrupt_configure_dt(&cfg->hv_gpio, GPIO_INT_EDGE_BOTH);
+    //  ret |= gpio_pin_interrupt_configure_dt(&cfg->hw_gpio, GPIO_INT_EDGE_BOTH);
+    //  if (ret < 0) {
+    //      LOG_ERR("Failed to configure interrupts");
+    //      return ret;
+    //  }
      return 0;
 }
 static int stm32_abz_hall_init(const struct device *dev)
 {
 	abz_stm32_init(dev);
     hall_stm32_init(dev);
+    LOG_INF("stm32_abz_hall_init Finish");
 	return 0;
 }
 
@@ -208,7 +224,7 @@ static int stm32_abz_hall_init(const struct device *dev)
 	DEVICE_DT_INST_DEFINE(n, stm32_abz_hall_init, NULL,			\
 				   &abz_hall_stm32_data_##n,			\
 				   &abz_hall_stm32_cfg_##n,			\
-				   POST_KERNEL, 86, \
+				   PRE_KERNEL_1, 86, \
 				   &driver_feedback			\
 		 );
  

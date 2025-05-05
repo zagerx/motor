@@ -48,6 +48,7 @@ static void pwm_stm32_start(const struct device *dev)
 		LOG_INF("master timer");
 		LL_TIM_EnableAllOutputs(cfg->timer);
 		LL_TIM_EnableCounter(cfg->timer);
+		LL_TIM_OC_SetCompareCH4(cfg->timer, (uint32_t)(cfg->timing_params[1]-200));//首次触发ADC
 		LL_TIM_CC_EnableChannel(cfg->timer,LL_TIM_CHANNEL_CH4);
 	}else{
 		LOG_INF("Slave timer");
@@ -161,7 +162,7 @@ static int pwm_stm32_init(const struct device *dev)
 	brk_dt_init.Break2Filter = LL_TIM_BREAK2_FILTER_FDIV1;
 	brk_dt_init.AutomaticOutput = LL_TIM_AUTOMATICOUTPUT_DISABLE;
 	LL_TIM_BDTR_Init(config->timer, &brk_dt_init);
-
+	LOG_INF("pwm_stm32_init Finish");
 	return 0;
 }
 
@@ -185,7 +186,7 @@ static int pwm_stm32_init(const struct device *dev)
         &pwm_stm32_init, \
         NULL, NULL, \
         &pwm_stm32_config_##n, \
-        POST_KERNEL, \
+        PRE_KERNEL_1, \
         80, \
         &pwm_stm32_api_##n);
 

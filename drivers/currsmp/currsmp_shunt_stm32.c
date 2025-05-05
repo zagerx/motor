@@ -208,7 +208,7 @@ static int currsmp_shunt_stm32_init(const struct device *dev)
          while (LL_ADC_IsActiveFlag_ADRDY(cfg->adc) == 0);      
         LL_ADC_DisableIT_JEOS(ADC2);        
     }
-
+    LOG_INF("currsmp_shunt_stm32_init");
     return 0;
 }
 
@@ -266,7 +266,7 @@ DT_INST_FOREACH_STATUS_OKAY(GENERATE_ISR)
                   NULL,	\
 			      &currsmp_shunt_stm32_data_##n,\
 			      &currsmp_shunt_stm32_config_##n,\
-			      POST_KERNEL,\
+			      PRE_KERNEL_1,\
 			      70, \
 			      &currsmp_shunt_stm32_driver_api);
 
