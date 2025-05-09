@@ -110,9 +110,8 @@ static void foc_curr_regulator(void *ctx)
     // svm_set(data->svm_handle, alph, beta);
     // LOG_INF("X");
     svm_t *svm = data->svm_handle;
-    pwm_set_phase_voltages(cfg->pwm,svm->a,svm->b,svm->c);
-
-    // pwm_set_phase_voltages(cfg->pwm,0.5f,0.5f,0.5f);
+    // pwm_set_phase_voltages(cfg->pwm,svm->duties.a,svm->duties.b,svm->duties.c);
+    pwm_set_phase_voltages(cfg->pwm,0.5f,0.5f,0.5f);
     // gpio_pin_toggle_dt(&led);
     gpio_pin_set_dt(&led, 0);
     // LL_GPIO_ResetOutputPin(GPIOE,LL_GPIO_PIN_1);

@@ -109,19 +109,12 @@ void svm_set(svm_t *svm, float va, float vb)
         case 5:Tcmp1 = Tc;Tcmp2 = Ta;Tcmp3 = Tb;break;
         case 6:Tcmp1 = Tb;Tcmp2 = Tc;Tcmp3 = Ta;break;
     }
-    // return;
 
     /*-------------------------占空比---------------------------*/
-    // svm->duties.a =(PWM_TS - Tcmp1*2.0f )/PWM_TS;
-    // svm->duties.b =(PWM_TS - Tcmp2*2.0f )/PWM_TS;
-    // svm->duties.c =(PWM_TS - Tcmp3*2.0f )/PWM_TS;
-    if (svm) {
-        svm->a = (PWM_TS - Tcmp1*2.0f )/PWM_TS;
-        svm->b = (PWM_TS - Tcmp2*2.0f )/PWM_TS;
-        svm->c = (PWM_TS - Tcmp3*2.0f )/PWM_TS;
-    }
-
-    // svm->duties.a = CLAMP(svm->duties.a, svm->d_min, svm->d_max);
-	// svm->duties.b = CLAMP(svm->duties.b, svm->d_min, svm->d_max);
-	// svm->duties.c = CLAMP(svm->duties.c, svm->d_min, svm->d_max);
+    svm->duties.a =(PWM_TS - Tcmp1*2.0f )/PWM_TS;
+    svm->duties.b =(PWM_TS - Tcmp2*2.0f )/PWM_TS;
+    svm->duties.c =(PWM_TS - Tcmp3*2.0f )/PWM_TS;
+        // svm->a = (PWM_TS - Tcmp1*2.0f )/PWM_TS;
+        // svm->b = (PWM_TS - Tcmp2*2.0f )/PWM_TS;
+        // svm->c = (PWM_TS - Tcmp3*2.0f )/PWM_TS;
 }

@@ -18,13 +18,11 @@ struct motor_thread_data {
 #define ENCODER_VCC DT_NODELABEL(encoder_vcc)
 #define MOTOR0_NODE DT_INST(0, foc_ctrl_algo)
 #define MOTOR1_NODE DT_INST(1, foc_ctrl_algo)
-const struct device *motor0 = DEVICE_DT_GET(MOTOR0_NODE);
-const struct device *motor1 = DEVICE_DT_GET(MOTOR1_NODE);
 
 #define LED0_NODE DT_ALIAS(led0)
 const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
 
-void motor_thread_entry(void *p1, void *p2, void *p3)
+static void motor_thread_entry(void *p1, void *p2, void *p3)
 {
 
     if (!device_is_ready(led.port)) {
@@ -42,7 +40,8 @@ void motor_thread_entry(void *p1, void *p2, void *p3)
     if (ret < 0) {
         printk("Error %d: Failed to configure brake pin\n", ret);
     }
-    // gpio_pin_set(mot12_brk.port, mot12_brk.pin,1);
+
+    const struct device *motor0 = DEVICE_DT_GET(MOTOR0_NODE);
 	const struct gpio_dt_spec encoder_vcc = GPIO_DT_SPEC_GET(ENCODER_VCC, gpios);
     ret = gpio_pin_configure_dt(&encoder_vcc, GPIO_OUTPUT_ACTIVE);
     if (ret < 0) {
@@ -53,7 +52,8 @@ void motor_thread_entry(void *p1, void *p2, void *p3)
         return;
     }
 	foc_start(motor0);
-
+    
+    const struct device *motor1 = DEVICE_DT_GET(MOTOR1_NODE);
     if (!device_is_ready(motor1)) {
         LOG_ERR("PWM motor1 device not ready");
         return;
@@ -61,9 +61,7 @@ void motor_thread_entry(void *p1, void *p2, void *p3)
 	foc_start(motor1);	
      
     while (1) {
-        // gpio_pin_set_dt(&led, 1);
         k_msleep(1);
-        // gpio_pin_toggle_dt(&led);
     }
 }
 
