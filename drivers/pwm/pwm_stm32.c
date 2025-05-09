@@ -75,7 +75,7 @@ static void pwm_stm32_setduties(const struct device *dev,float a,float b,float c
     LL_TIM_OC_SetCompareCH3(cfg->timer, (uint32_t)(cfg->timing_params[1]*c));
 	if(!cfg->slave_enable)
 	{
-		LL_TIM_OC_SetCompareCH4(cfg->timer, (uint32_t)(cfg->timing_params[1]*0.5f)); //TODO
+		LL_TIM_OC_SetCompareCH4(TIM1, (uint32_t)(cfg->timing_params[1]-200));//首次触发ADC
 	}
     
 }

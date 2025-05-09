@@ -28,6 +28,7 @@ struct foc_data{
     svm_t *svm_handle;
 
     float self_theta;
+    float test_a;
 	/* Read only */
 	float i_d;
 	float i_q;
@@ -63,6 +64,11 @@ extern void currsmp_shunt_stm32_get_currents(const struct device *dev,struct cur
     {
         LOG_INF("test");
     }
+    void _2r_2s(float* dq,float theta,float* alpbet)
+    {
+        alpbet[0] = dq[0] * cosf(theta) -  dq[1] * sinf(theta);
+        alpbet[1] = dq[0] * sinf(theta) +  dq[1] * cosf(theta);
+    }    
 static void foc_curr_regulator(void *ctx)
 {    
     struct device *dev = (struct device*)ctx;
@@ -95,12 +101,18 @@ static void foc_curr_regulator(void *ctx)
 
     float alph,beta,sin_the,cos_the;
     sin_cos_f32(data->self_theta,&sin_the,&cos_the);
-    data->self_theta += 0.002f;
+    data->self_theta += 0.001f;
     if(data->self_theta>6.28f)
     {
         data->self_theta = 0.0f;
     }
-    inv_park_f32(0.0f,0.06f,&alph,&beta,sin_the,cos_the);
+    // inv_park_f32(0.2f,0.0f,&alph,&beta,sin_the,cos_the);
+    float dq[2], ab[2];
+    dq[0] = 0.00f;
+    dq[1] = 0.02f;
+    _2r_2s(dq,data->self_theta,ab);
+    alph = ab[0];
+    beta = ab[1];
     // if(cfg->modulate)
     // {
         cfg->modulate(data->svm_handle, alph, beta);
@@ -110,8 +122,9 @@ static void foc_curr_regulator(void *ctx)
     // svm_set(data->svm_handle, alph, beta);
     // LOG_INF("X");
     svm_t *svm = data->svm_handle;
-    // pwm_set_phase_voltages(cfg->pwm,svm->duties.a,svm->duties.b,svm->duties.c);
-    pwm_set_phase_voltages(cfg->pwm,0.5f,0.5f,0.5f);
+    pwm_set_phase_voltages(cfg->pwm,svm->duties.a,svm->duties.b,svm->duties.c);
+    data->test_a = svm->duties.a*10000.0f;
+    // pwm_set_phase_voltages(cfg->pwm,0.5f,0.5f,0.5f);
     // gpio_pin_toggle_dt(&led);
     gpio_pin_set_dt(&led, 0);
     // LL_GPIO_ResetOutputPin(GPIOE,LL_GPIO_PIN_1);
