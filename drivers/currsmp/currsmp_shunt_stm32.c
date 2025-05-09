@@ -58,12 +58,12 @@ static void currsmp_shunt_stm32_configure(const struct device *dev,
 	data->regulation_ctx = ctx;
 }
 
-static void currsmp_shunt_stm32_get_currents(const struct device *dev,
+void currsmp_shunt_stm32_get_currents(const struct device *dev,
 					     struct currsmp_curr *curr)
 {
+    // return;
 	const struct currsmp_shunt_stm32_config *cfg = dev->config;
 	struct currsmp_shunt_stm32_data *data = dev->data;
-     
     data->adc_channl_a = LL_ADC_INJ_ReadConversionData12(cfg->adc, LL_ADC_INJ_RANK_1);
     data->adc_channl_b = LL_ADC_INJ_ReadConversionData12(cfg->adc, LL_ADC_INJ_RANK_2);
     data->adc_channl_c = LL_ADC_INJ_ReadConversionData12(cfg->adc, LL_ADC_INJ_RANK_3);
@@ -79,7 +79,12 @@ static const struct currsmp_driver_api currsmp_shunt_stm32_driver_api = {
 	.configure = currsmp_shunt_stm32_configure,
 	.get_currents = currsmp_shunt_stm32_get_currents,
 };
-
+// void currsmp_get_currents(const struct device *dev,
+//                      struct currsmp_curr *curr)
+//  {
+//      const struct currsmp_driver_api *api = dev->api;
+//      api->get_currents(dev, curr);
+//  }
 
 static int currsmp_shunt_stm32_init(const struct device *dev)
 {

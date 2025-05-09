@@ -54,21 +54,27 @@ static int foc_currentloop(const struct device* dev)
 
 static int foc_openloop(const struct device* dev)
 {
-    LOG_INF("foc_openloop  name %s",dev->name);
+    // LOG_INF("foc_openloop  name %s",dev->name);
     return 0;
 }
 extern const struct gpio_dt_spec led;
+extern void currsmp_shunt_stm32_get_currents(const struct device *dev,struct currsmp_curr *curr);
+    void test_fun(void)
+    {
+        LOG_INF("test");
+    }
 static void foc_curr_regulator(void *ctx)
 {    
     struct device *dev = (struct device*)ctx;
-    const struct foc_config *cfg = dev->config;
-    const struct device *currsmp = cfg->currsmp;
+    struct foc_config *cfg = (struct foc_config *)dev->config;
+    struct device *currsmp = (struct device *)cfg->currsmp;
     struct foc_data *data = dev->data;
 
     struct currsmp_curr current_now;
     // LL_GPIO_SetOutputPin(GPIOE,LL_GPIO_PIN_1);
     gpio_pin_set_dt(&led, 1);
-    // currsmp_get_currents(currsmp,&current_now);
+    // test_fun();
+    currsmp_get_currents(currsmp,&current_now);
  	// data->eangle = feedback_get_eangle(cfg->feedback);
     // clarke_f32(current_now.i_a, current_now.i_b, &data->v_alpha, &data->v_beta);
 
@@ -89,8 +95,12 @@ static void foc_curr_regulator(void *ctx)
 
     float alph,beta,sin_the,cos_the;
     sin_cos_f32(data->self_theta,&sin_the,&cos_the);
-    data->self_theta += 0.02f;
-    inv_park_f32(0.0f,0.02f,&alph,&beta,sin_the,cos_the);
+    data->self_theta += 0.002f;
+    if(data->self_theta>6.28f)
+    {
+        data->self_theta = 0.0f;
+    }
+    inv_park_f32(0.0f,0.06f,&alph,&beta,sin_the,cos_the);
     // if(cfg->modulate)
     // {
         cfg->modulate(data->svm_handle, alph, beta);
@@ -99,8 +109,8 @@ static void foc_curr_regulator(void *ctx)
     // }
     // svm_set(data->svm_handle, alph, beta);
     // LOG_INF("X");
-    // svm_t *svm = data->svm_handle;
-    // pwm_set_phase_voltages(cfg->pwm,0.5f,0.5f,0.5f);
+    svm_t *svm = data->svm_handle;
+    pwm_set_phase_voltages(cfg->pwm,svm->a,svm->b,svm->c);
 
     // pwm_set_phase_voltages(cfg->pwm,0.5f,0.5f,0.5f);
     // gpio_pin_toggle_dt(&led);

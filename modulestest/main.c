@@ -34,10 +34,15 @@ LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
 // int32_t get_tim4_encoder_count(void);
 // void hall_init(void);
 extern void motor_thread_creat(const struct device *dev);
+extern void motor_thread_entry(void *p1, void *p2, void *p3);
 
 int main(void)
 {
-    motor_thread_creat(NULL);
+    size_t isr_stack_size = CONFIG_ISR_STACK_SIZE;
+    LOG_INF("ISR stack size: %d\n", isr_stack_size);
+
+    // motor_thread_creat(NULL);
+    motor_thread_entry(NULL,NULL,NULL);
 	// const struct gpio_dt_spec mot12_brk = GPIO_DT_SPEC_GET(MOT12_BRK_PIN_NODE, gpios);
     // int ret = gpio_pin_configure_dt(&mot12_brk, GPIO_OUTPUT_ACTIVE);
     // if (ret < 0) {

@@ -71,11 +71,11 @@
                      struct currsmp_curr *curr)
  {
      const struct currsmp_driver_api *api = dev->api;
- 
      api->get_currents(dev, curr);
  }
  
- 
+// void currsmp_get_currents(const struct device *dev,
+//     struct currsmp_curr *curr) ;
  /** @} */
  
  #endif /* _SPINNER_DRIVERS_CURRSMP_H_ */
