@@ -34,7 +34,7 @@ static void adc_stm32_isr(const struct device *dev)
     struct currsmp_shunt_stm32_data* data = dev->data;
     if (LL_ADC_IsActiveFlag_JEOS(cfg->adc)) 
     {   
-      LL_GPIO_TogglePin(GPIOE,LL_GPIO_PIN_1);
+    //   LL_GPIO_TogglePin(GPIOE,LL_GPIO_PIN_1);
       LL_ADC_ClearFlag_JEOS(cfg->adc);
     //   data->adc_channl_a = LL_ADC_INJ_ReadConversionData12(cfg->adc, LL_ADC_INJ_RANK_1);
     //   data->adc_channl_b = LL_ADC_INJ_ReadConversionData12(cfg->adc, LL_ADC_INJ_RANK_2);

@@ -1,6 +1,7 @@
 #include "dsp/controller_functions.h"
 #include "zephyr/device.h"
 
+#include <math.h>
 #include <zephyr/logging/log.h>
 
 #include <lib/foc/foc.h>
@@ -9,6 +10,9 @@
 #include <lib/focutils/svm/svm.h>
 #include <lib/focutils/utils/utils.h>
 #include <drivers/feedback.h>
+#include <zephyr/drivers/gpio.h>
+#include <stm32h7xx_ll_gpio.h>//TODO
+
 LOG_MODULE_REGISTER(foc, LOG_LEVEL_DBG);
 
 #define DT_DRV_COMPAT foc_ctrl_algo 
@@ -23,6 +27,7 @@ struct foc_config{
 struct foc_data{
     svm_t *svm_handle;
 
+    float self_theta;
 	/* Read only */
 	float i_d;
 	float i_q;
@@ -52,7 +57,7 @@ static int foc_openloop(const struct device* dev)
     LOG_INF("foc_openloop  name %s",dev->name);
     return 0;
 }
-
+extern const struct gpio_dt_spec led;
 static void foc_curr_regulator(void *ctx)
 {    
     struct device *dev = (struct device*)ctx;
@@ -61,8 +66,10 @@ static void foc_curr_regulator(void *ctx)
     struct foc_data *data = dev->data;
 
     struct currsmp_curr current_now;
-    currsmp_get_currents(currsmp,&current_now);
- 	data->eangle = feedback_get_eangle(cfg->feedback);
+    // LL_GPIO_SetOutputPin(GPIOE,LL_GPIO_PIN_1);
+    gpio_pin_set_dt(&led, 1);
+    // currsmp_get_currents(currsmp,&current_now);
+ 	// data->eangle = feedback_get_eangle(cfg->feedback);
     // clarke_f32(current_now.i_a, current_now.i_b, &data->v_alpha, &data->v_beta);
 
     // float sin_val,cos_val;
@@ -79,8 +86,26 @@ static void foc_curr_regulator(void *ctx)
     /* set phase voltage */
     // svm_duties_t *duties = &(data->svm_handle->duties);
     // pwm_set_phase_voltages(cfg->pwm,duties->a,duties->b,duties->c);
-    pwm_set_phase_voltages(cfg->pwm,0.5f,0.5f,0.5f);
 
+    float alph,beta,sin_the,cos_the;
+    sin_cos_f32(data->self_theta,&sin_the,&cos_the);
+    data->self_theta += 0.02f;
+    inv_park_f32(0.0f,0.02f,&alph,&beta,sin_the,cos_the);
+    // if(cfg->modulate)
+    // {
+        cfg->modulate(data->svm_handle, alph, beta);
+    // }else{
+    //     LOG_INF("ERR");
+    // }
+    // svm_set(data->svm_handle, alph, beta);
+    // LOG_INF("X");
+    // svm_t *svm = data->svm_handle;
+    // pwm_set_phase_voltages(cfg->pwm,0.5f,0.5f,0.5f);
+
+    // pwm_set_phase_voltages(cfg->pwm,0.5f,0.5f,0.5f);
+    // gpio_pin_toggle_dt(&led);
+    gpio_pin_set_dt(&led, 0);
+    // LL_GPIO_ResetOutputPin(GPIOE,LL_GPIO_PIN_1);
 
     return;
 

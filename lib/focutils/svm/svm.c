@@ -5,7 +5,7 @@
 
 #include <zephyr/sys/util.h>
 #include <lib/focutils/svm/svm.h>
-
+#include <zephyr/logging/log.h>
 /*******************************************************************************
  * Private
  ******************************************************************************/
@@ -17,14 +17,15 @@
 /*******************************************************************************
  * Public
  ******************************************************************************/
+ LOG_MODULE_REGISTER(SVM, LOG_LEVEL_DBG);
 
 void svm_init(svm_t *svm)
 {
 	svm->sector = 0U;
 
-	svm->duties.a = 0.0f;
-	svm->duties.b = 0.0f;
-	svm->duties.c = 0.0f;
+	// svm->duties.a = 0.0f;
+	// svm->duties.b = 0.0f;
+	// svm->duties.c = 0.0f;
 
 	svm->d_min = 0.0f;
 	svm->d_max = 1.0f;
@@ -32,7 +33,7 @@ void svm_init(svm_t *svm)
 
 void svm_set(svm_t *svm, float va, float vb)
 {
-    //判断扇区
+     //判断扇区
     unsigned char sector;
     sector = 0;
     /*-------------------------------*/
@@ -108,11 +109,19 @@ void svm_set(svm_t *svm, float va, float vb)
         case 5:Tcmp1 = Tc;Tcmp2 = Ta;Tcmp3 = Tb;break;
         case 6:Tcmp1 = Tb;Tcmp2 = Tc;Tcmp3 = Ta;break;
     }
+    // return;
+
     /*-------------------------占空比---------------------------*/
-    svm->duties.a =(PWM_TS - Tcmp1*2.0f )/PWM_TS;
-    svm->duties.b =(PWM_TS - Tcmp2*2.0f )/PWM_TS;
-    svm->duties.c =(PWM_TS - Tcmp3*2.0f )/PWM_TS;
-	// svm->duties.a = CLAMP(svm->duties.a, svm->d_min, svm->d_max);
+    // svm->duties.a =(PWM_TS - Tcmp1*2.0f )/PWM_TS;
+    // svm->duties.b =(PWM_TS - Tcmp2*2.0f )/PWM_TS;
+    // svm->duties.c =(PWM_TS - Tcmp3*2.0f )/PWM_TS;
+    if (svm) {
+        svm->a = 0.0f;//(PWM_TS - Tcmp1*2.0f )/PWM_TS;
+        svm->b = 0.0f;//(PWM_TS - Tcmp2*2.0f )/PWM_TS;
+        svm->c = 0.0f;//(PWM_TS - Tcmp3*2.0f )/PWM_TS;
+    }
+
+    // svm->duties.a = CLAMP(svm->duties.a, svm->d_min, svm->d_max);
 	// svm->duties.b = CLAMP(svm->duties.b, svm->d_min, svm->d_max);
 	// svm->duties.c = CLAMP(svm->duties.c, svm->d_min, svm->d_max);
 }

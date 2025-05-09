@@ -32,11 +32,17 @@ typedef struct svm {
 	/** SVM sector. */
 	uint8_t sector;
 	/** Duty cycles. */
-	svm_duties_t duties;
+	// svm_duties_t duties;
 	/** Minimum allowed duty cycle. */
 	float d_min;
 	/** Maximum allowed duty cycle. */
 	float d_max;
+
+	float a;
+	/** B channel duty cycle. */
+	float b;
+	/** C channel duty cycle. */
+	float c;	
 } svm_t;
 
 /**
