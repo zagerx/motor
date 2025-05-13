@@ -37,6 +37,12 @@ typedef struct svm {
 	float d_min;
 	/** Maximum allowed duty cycle. */
 	float d_max;
+
+	// float a;
+	// /** B channel duty cycle. */
+	// float b;
+	// /** C channel duty cycle. */
+	// float c;	
 } svm_t;
 
 /**

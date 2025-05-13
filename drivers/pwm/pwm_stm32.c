@@ -48,16 +48,23 @@ static void pwm_stm32_start(const struct device *dev)
 		LOG_INF("master timer");
 		LL_TIM_EnableAllOutputs(cfg->timer);
 		LL_TIM_EnableCounter(cfg->timer);
-		LL_TIM_OC_SetCompareCH4(cfg->timer, (uint32_t)(cfg->timing_params[1]-200));//首次触发ADC
+
+		// LL_TIM_OC_SetCompareCH1(cfg->timer, (uint32_t)(cfg->timing_params[1]*0.5f));
+		// LL_TIM_OC_SetCompareCH2(cfg->timer, (uint32_t)(cfg->timing_params[1]*0.5f));
+		// LL_TIM_OC_SetCompareCH3(cfg->timer, (uint32_t)(cfg->timing_params[1]*0.5f));
+		// LL_TIM_OC_SetCompareCH4(cfg->timer, (uint32_t)(cfg->timing_params[1]-200));//首次触发ADC
 		LL_TIM_CC_EnableChannel(cfg->timer,LL_TIM_CHANNEL_CH4);
 	}else{
 		LOG_INF("Slave timer");
+		// LL_TIM_OC_SetCompareCH1(cfg->timer, (uint32_t)(cfg->timing_params[1]*0.5f));
+		// LL_TIM_OC_SetCompareCH2(cfg->timer, (uint32_t)(cfg->timing_params[1]*0.5f));
+		// LL_TIM_OC_SetCompareCH3(cfg->timer, (uint32_t)(cfg->timing_params[1]*0.5f));		
+		LL_TIM_OC_SetCompareCH4(TIM1, (uint32_t)(cfg->timing_params[1]-200));//首次触发ADC		
 		LL_TIM_EnableAllOutputs(cfg->timer);	
 	}
 	LL_TIM_CC_EnableChannel(cfg->timer,\
 							LL_TIM_CHANNEL_CH1 | LL_TIM_CHANNEL_CH2 | LL_TIM_CHANNEL_CH3 |\
-							LL_TIM_CHANNEL_CH1N| LL_TIM_CHANNEL_CH1N| LL_TIM_CHANNEL_CH1N);  
-
+							LL_TIM_CHANNEL_CH1N| LL_TIM_CHANNEL_CH2N| LL_TIM_CHANNEL_CH3N);  
 }
 static void pwm_stm32_setduties(const struct device *dev,float a,float b,float c)
 {
@@ -65,8 +72,11 @@ static void pwm_stm32_setduties(const struct device *dev,float a,float b,float c
     LL_TIM_OC_SetCompareCH1(cfg->timer, (uint32_t)(cfg->timing_params[1]*a));
     LL_TIM_OC_SetCompareCH2(cfg->timer, (uint32_t)(cfg->timing_params[1]*b));
     LL_TIM_OC_SetCompareCH3(cfg->timer, (uint32_t)(cfg->timing_params[1]*c));
-
-    LL_TIM_OC_SetCompareCH4(cfg->timer, (uint32_t)(cfg->timing_params[1]-200)); //TODO
+	if(!cfg->slave_enable)
+	{
+		LL_TIM_OC_SetCompareCH4(TIM1, (uint32_t)(cfg->timing_params[1]-200));//首次触发ADC
+	}
+    
 }
 /*==========================================================================================
  * @brief        配置PWM频率、对应通道
@@ -112,11 +122,13 @@ static int pwm_stm32_init(const struct device *dev)
     tim_init.Autoreload = config->timing_params[1];  // arr
     tim_init.Prescaler = config->timing_params[2];   // psc
 	tim_init.RepetitionCounter = 0U;
+	tim_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
 	if (LL_TIM_Init(config->timer, &tim_init) != SUCCESS) {
 		LOG_ERR("Could not initialize timer");
 		return -EIO;
   	}
-	LL_TIM_DisableARRPreload(config->timer);
+	// LL_TIM_DisableARRPreload(config->timer);
+	LL_TIM_EnableARRPreload(config->timer);
 	if(!config->slave_enable)
 	{
 		LL_TIM_SetClockSource(config->timer, LL_TIM_CLOCKSOURCE_INTERNAL);

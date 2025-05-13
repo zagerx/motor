@@ -38,7 +38,11 @@
 		encoder_vcc: led_2 {
 			gpios = <&gpiod 3 GPIO_ACTIVE_HIGH>;
 			label = "User LD2";
-		};		
+		};	
+		wdog: led_3 {
+			gpios = <&gpioe 7 GPIO_ACTIVE_HIGH>;
+			label = "User LD4";
+		};				
 	};
 
 	aliases {
@@ -58,7 +62,7 @@
 			currsmp = <&currsmp2>;
 			pwm = <&pwm8>;
 			feedback = <&abz_hall2>;
-			modulate = <1>;
+			modulate = <0>;
 		};
 	};
 };
@@ -126,7 +130,7 @@
                     &tim1_ch2_pe11 &tim1_ch2n_pe10
                     &tim1_ch3_pe13 &tim1_ch3n_pe12>;
         pinctrl-names = "default";
-        timing-params = <50 13750 0>;  // t_dead_ns, arr, psc
+        timing-params = <120 13750 0>;  // t_dead_ns, arr, psc
         slave = <0>;
         status = "okay";
     };
@@ -139,7 +143,7 @@
                     &tim8_ch2_pc7 &tim8_ch2n_pb14
                     &tim8_ch3_pc8 &tim8_ch3n_pb15>;
         pinctrl-names = "default";
-        timing-params = <50 13750 0>;  // t_dead_ns, arr, psc
+        timing-params = <120 13750 0>;  // t_dead_ns, arr, psc
         slave = <1>;
         status = "okay";
     };
