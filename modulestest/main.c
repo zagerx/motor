@@ -22,8 +22,6 @@ extern void motor_thread_creat(const struct device *dev);
 
 int main(void)
 {
-    size_t isr_stack_size = CONFIG_ISR_STACK_SIZE;
-    LOG_INF("ISR stack size: %d\n", isr_stack_size);
     motor_thread_creat(NULL);
 	while (1) {
 		k_msleep(SLEEP_TIME_MS);
