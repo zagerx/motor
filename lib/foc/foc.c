@@ -99,8 +99,8 @@
  
      /* Open loop test generation */
      float alph, beta, sin_the, cos_the;
-     sin_cos_f32((data->self_theta * 57.2957795131f), &sin_the, &cos_the);
-     
+    //  sin_cos_f32((data->self_theta * 57.2957795131f), &sin_the, &cos_the);
+     sin_cos_f32((data->eangle * 57.2957795131f), &sin_the, &cos_the);
      /* Update theta */
      data->self_theta += 0.0008f;
      if (data->self_theta > 6.28f) {
@@ -108,7 +108,7 @@
      }
  
      /* Inverse Park transform */
-     inv_park_f32(0.01f, 0.0f, &alph, &beta, sin_the, cos_the);
+     inv_park_f32(0.0f, 0.02f, &alph, &beta, sin_the, cos_the);
      
      /* Space Vector Modulation */
      cfg->modulate(data->svm_handle, alph, beta);
@@ -140,8 +140,13 @@
  void foc_start(const struct device* dev)
  {
      const struct foc_config *cfg = dev->config;
+
+     const struct device *dev_f = cfg->feedback;
+     feedback_start(dev_f);
+
      const struct device *devc = cfg->pwm;
      pwm_start(devc);
+
  }
  
  /* Device instance macro */

@@ -10,7 +10,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/logging/log.h>
-
+#include <zephyr/drivers/can.h>
 #include <lib/foc/foc.h>
 
 LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
@@ -19,12 +19,14 @@ LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
 #define SLEEP_TIME_MS   1
 
 extern void motor_thread_creat(const struct device *dev);
+extern void creat_canard_thread(void);
 
 int main(void)
 {
-    motor_thread_creat(NULL);
+	creat_canard_thread(); 
+	motor_thread_creat(NULL);
 	while (1) {
-		k_msleep(SLEEP_TIME_MS);
+        k_msleep(1000);
 	}
 	return 0;
 }

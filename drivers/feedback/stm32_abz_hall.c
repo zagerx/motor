@@ -24,7 +24,28 @@
  #include <stm32_ll_tim.h>
  
  LOG_MODULE_REGISTER(abz_hall_stm32, LOG_LEVEL_DBG);
- 
+ #define SCETION_6_BASEANGLE             (0.3416f)
+ #define SCETION_4_BASEANGLE             (1.4624f)
+ #define SCETION_5_BASEANGLE             (2.4623f)
+ #define SCETION_1_BASEANGLE             (3.6222f)
+ #define SCETION_3_BASEANGLE             (4.5830f)
+ #define SCETION_2_BASEANGLE             (5.5344f)
+
+ #define HALL_POSITIVE_OFFSET            (0.0f)
+ #define HALL_NEGATIVE_OFFSET            (0.0f)
+
+ #define _2PI             6.2831852f
+ #define PI               3.14159260f
+
+ #define ABZ_ENCODER_LINES_HALF          (2500)
+ #define ABZ_ENCODER_LINES               (5000)//编码器线数
+ #define ABZ_ENCODER_RESOLUTION          (0.00628f)//编码器分辨率 2*pi/5000
+
+static float _normalize_angle(float angle)
+{
+  float a = fmod(angle, _2PI);
+  return a >= 0 ? a : (a + 2.0f*PI);  
+}
  /* Driver configuration structure */
  struct abz_hall_stm32_config {
      uint32_t lines;                     /* Encoder lines per revolution */
@@ -38,10 +59,22 @@
  };
  
  /* Driver runtime data */
+ typedef struct _sect
+ {
+     /* data */
+     uint8_t last_sect;
+     uint8_t next_sect;
+     float angle;
+     float diff;
+ }sect_t;
+ 
  struct hall_data_t{
     uint8_t pre_sect;
     uint8_t err_count;
     float base_angle[6];
+    float realcacle_angle;
+    sect_t positive_sect[7];
+    sect_t negative_sect[7];    
  };
  struct abz_hall_stm32_data {
      int overflow;                       /* Timer overflow count */
@@ -56,14 +89,104 @@
  static void hall_angleupdate(const void* obj,uint8_t cur_sect) 
  {
     struct hall_data_t* hall = (struct hall_data_t*)obj;
-    // if(hall->pre_sect)
+    sect_t *psect;
+    switch(hall->pre_sect)
+    {
+    /****************************SECTION 6***********************************/    
+        case 6:
+            if(cur_sect == 4) {//正转
+                psect = (sect_t *)hall->positive_sect;
+            }else if(cur_sect == 2){//
+                psect = (sect_t *)hall->negative_sect;
+            }else if (cur_sect == 6) {//仍在当前扇区
+             
+            }else{
+                //错误
+            }
+        break;  
+    /****************************SECTION 4***********************************/    
+        case 4:
+            if(cur_sect == 5) {//正转
+                psect = (sect_t *)hall->positive_sect;
+            }else if(cur_sect == 6){//
+                psect = (sect_t *)hall->negative_sect;
+            }else if (cur_sect == 4) {//仍在当前扇区
+             
+            }else{
+                //错误
+            }
+        break;
+    /****************************SECTION 5***********************************/    
+        case 5:
+            if(cur_sect == 1) {//正转
+                psect = (sect_t *)hall->positive_sect;
+            }else if(cur_sect == 4){//
+                psect = (sect_t *)hall->negative_sect;
+            }else if (cur_sect == 5) {//仍在当前扇区
+            
+            }else{
+                //错误
+            }
+        break;
+    /****************************SECTION 1***********************************/    
+        case 1:
+            if(cur_sect == 3) {//正转
+                psect = (sect_t *)hall->positive_sect;
+            }else if(cur_sect == 5){//
+                psect = (sect_t *)hall->negative_sect;
+            }else if (cur_sect == 1) {//仍在当前扇区
+             
+            }else{
+                //错误
+            }
+        break;
+    /****************************SECTION 3***********************************/    
+        case 3:
+            if(cur_sect == 2) {//正转
+                psect = (sect_t *)hall->positive_sect;
+            }else if(cur_sect == 1){//
+                psect = (sect_t *)hall->negative_sect;
+            }else if (cur_sect == 3) {//仍在当前扇区
+            
+            }else{
+                //错误
+            }        
+        break;
+    /****************************SECTION 2***********************************/    
+        case 2:
+            if(cur_sect == 6) {//正转
+                psect = (sect_t *)hall->positive_sect;
+            }else if(cur_sect == 3){//
+                psect = (sect_t *)hall->negative_sect;
+            }else if (cur_sect == 2) {//仍在当前扇区
+            
+            }else{
+                //错误
+            }        
+        break;
+    /***********************ERR SECTION***********************************/    
+        default:
+        break;        
+    }
+
+    hall->realcacle_angle = psect[cur_sect].angle;
+
+    hall->pre_sect = cur_sect;
  }
  /* API implementation */
  static float abz_stm32_get_eangle(const struct device *dev)
- {
-     /* TODO: Implement electrical angle calculation */
-    
-     return 0.0f;
+ { 
+    /* TODO: Implement electrical angle calculation */
+    const struct abz_hall_stm32_config *cfg = dev->config;
+    const struct abz_hall_stm32_data *data = dev->data;
+    struct hall_data_t* hall = (struct hall_data_t*)(&data->hall);
+   
+     int32_t delt_cnt =  LL_TIM_GetCounter(cfg->timer) - ABZ_ENCODER_LINES_HALF;
+     LL_TIM_SetCounter(cfg->timer,ABZ_ENCODER_LINES_HALF);
+     float diff = (delt_cnt)*ABZ_ENCODER_RESOLUTION;
+
+     hall->realcacle_angle += diff;     
+     return hall->realcacle_angle;
  }
  
  static float abz_stm32_get_mangle(const struct device *dev)
@@ -84,13 +207,32 @@
      /* TODO: Implement position calculation */
      return 0.0f;
  }
- 
+  /*
+  * Enable hall sensor interface
+  */
+  static void abz_hall_stm32_enable(const struct device *dev)
+  {
+      const struct abz_hall_stm32_config *cfg = dev->config;
+      uint8_t ret;
+      LOG_INF("device name: %s", dev->name);
+      /* Start encoder timer */
+      LL_TIM_EnableCounter(cfg->timer);
+      /* Configure hall sensor interrupts */
+      ret = gpio_pin_interrupt_configure_dt(&cfg->hu_gpio, GPIO_INT_EDGE_BOTH);
+      ret |= gpio_pin_interrupt_configure_dt(&cfg->hv_gpio, GPIO_INT_EDGE_BOTH);
+      ret |= gpio_pin_interrupt_configure_dt(&cfg->hw_gpio, GPIO_INT_EDGE_BOTH);
+      if (ret < 0) {
+          LOG_ERR("Failed to configure interrupts");
+      }
+  }
+  
  /* Driver API structure */
  static const struct feedback_driver_api driver_feedback = {
      .get_rads = abz_stm32_get_rads,
      .get_eangle = abz_stm32_get_eangle,
      .get_mangle = abz_stm32_get_mangle,
-     .get_position = abz_stm32_get_position
+     .get_position = abz_stm32_get_position,
+     .hall_start = abz_hall_stm32_enable,
  };
  
  /*
@@ -110,11 +252,14 @@
      int hv_state = gpio_pin_get_dt(&cfg->hv_gpio); 
      int hw_state = gpio_pin_get_dt(&cfg->hw_gpio);
      
-     LOG_DBG("Hall states - HALL_VAL:%d", hu_state<<2|hv_state<<1|hw_state);
+    //  LOG_DBG("Hall states - HALL_VAL:%d", hu_state<<2|hv_state<<1|hw_state);
  
      /* Update sector information */
-     data->pre_sect = data->cur_sect;
-     data->cur_sect = hu_state<<2|hv_state<<1|hw_state;
+     uint8_t cur_sect;
+     cur_sect = hu_state<<2|hw_state<<1|hv_state;     
+     hall_angleupdate(&(data->hall),cur_sect);
+    //  data->pre_sect = data->cur_sect;
+
  }
  
  /*
@@ -170,27 +315,7 @@
      return 0;
  }
  
- /*
-  * Enable hall sensor interface
-  */
- static void abz_hall_stm32_enable(const struct device *dev)
- {
-     const struct abz_hall_stm32_config *cfg = dev;
-     uint8_t ret;
- 
-     /* Start encoder timer */
-     LL_TIM_EnableCounter(cfg->timer);
- 
-     /* Configure hall sensor interrupts */
-     ret = gpio_pin_interrupt_configure_dt(&cfg->hu_gpio, GPIO_INT_EDGE_BOTH);
-     ret |= gpio_pin_interrupt_configure_dt(&cfg->hv_gpio, GPIO_INT_EDGE_BOTH);
-     ret |= gpio_pin_interrupt_configure_dt(&cfg->hw_gpio, GPIO_INT_EDGE_BOTH);
- 
-     if (ret < 0) {
-         LOG_ERR("Failed to configure interrupts");
-     }
- }
- 
+
  /*
   * Initialize hall sensor interface
   */
@@ -223,7 +348,32 @@
          LOG_ERR("Failed to add callback");
          return ret;
      }
- 
+     struct hall_data_t *hall = &(data->hall);
+     hall->positive_sect[6].angle = SCETION_6_BASEANGLE + HALL_POSITIVE_OFFSET;
+     hall->positive_sect[4].angle = SCETION_4_BASEANGLE + HALL_POSITIVE_OFFSET;
+     hall->positive_sect[5].angle = SCETION_5_BASEANGLE + HALL_POSITIVE_OFFSET;
+     hall->positive_sect[1].angle = SCETION_1_BASEANGLE + HALL_POSITIVE_OFFSET;
+     hall->positive_sect[3].angle = SCETION_3_BASEANGLE + HALL_POSITIVE_OFFSET;
+     hall->positive_sect[2].angle = SCETION_2_BASEANGLE + HALL_POSITIVE_OFFSET;
+     hall->positive_sect[6].diff = _normalize_angle(hall->positive_sect[6].angle - hall->positive_sect[2].angle);
+     hall->positive_sect[4].diff = _normalize_angle(hall->positive_sect[4].angle - hall->positive_sect[6].angle);
+     hall->positive_sect[5].diff = _normalize_angle(hall->positive_sect[5].angle - hall->positive_sect[4].angle);
+     hall->positive_sect[1].diff = _normalize_angle(hall->positive_sect[1].angle - hall->positive_sect[5].angle);
+     hall->positive_sect[3].diff = _normalize_angle(hall->positive_sect[3].angle - hall->positive_sect[1].angle);
+     hall->positive_sect[2].diff = _normalize_angle(hall->positive_sect[2].angle - hall->positive_sect[3].angle);
+
+     hall->negative_sect[6].angle = hall->positive_sect[4].angle + HALL_NEGATIVE_OFFSET;
+     hall->negative_sect[4].angle = hall->positive_sect[5].angle + HALL_NEGATIVE_OFFSET;
+     hall->negative_sect[5].angle = hall->positive_sect[1].angle + HALL_NEGATIVE_OFFSET;
+     hall->negative_sect[1].angle = hall->positive_sect[3].angle + HALL_NEGATIVE_OFFSET;
+     hall->negative_sect[3].angle = hall->positive_sect[2].angle + HALL_NEGATIVE_OFFSET;
+     hall->negative_sect[2].angle = hall->positive_sect[6].angle + HALL_NEGATIVE_OFFSET;
+     hall->negative_sect[6].diff = -hall->positive_sect[5].diff;
+     hall->negative_sect[4].diff = -hall->positive_sect[1].diff;
+     hall->negative_sect[5].diff = -hall->positive_sect[3].diff;
+     hall->negative_sect[1].diff = -hall->positive_sect[2].diff; 
+     hall->negative_sect[3].diff = -hall->positive_sect[6].diff;
+     hall->negative_sect[2].diff = -hall->positive_sect[4].diff;        
      return 0;
  }
  
@@ -234,6 +384,7 @@
  {
      abz_stm32_init(dev);
      hall_stm32_init(dev);
+    //  abz_hall_stm32_enable(dev);
      LOG_INF("stm32_abz_hall_init Finish");
      return 0;
  }

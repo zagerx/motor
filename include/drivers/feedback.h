@@ -44,10 +44,21 @@
  
      /* feedback calibration */
      int (*calibration)(const struct device *dev);
+
+     void (*hall_start)(const struct device *dev);
  };
  
  /** @endcond */
+
  
+ static inline void feedback_start(const struct device *dev)
+ {
+    const struct feedback_driver_api *api = dev->api;
+    api->hall_start(dev);
+    return;
+ }
+
+
  /**
   * @brief Get rads.
   *
