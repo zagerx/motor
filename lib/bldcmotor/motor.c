@@ -8,10 +8,13 @@
  * 3. 运行看门狗定时器
  */
 
+#include "zephyr/device.h"
+#include <stdint.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/drivers/gpio.h>
 #include <lib/foc/foc.h>
+#define DT_DRV_COMPAT motor_bldc
 
 /* 日志模块注册 */
 LOG_MODULE_REGISTER(motor_thread, LOG_LEVEL_DBG);
@@ -27,15 +30,33 @@ struct motor_thread_data {
     const struct device *motor_dev;  ///< 电机设备指针
     struct k_thread thread;         ///< 线程控制块
 };
+struct motor_config {
+    const struct device *foc_dev;  // FOC控制算法设备
+};
+
+struct motor_data {
+    uint8_t test;
+};
+
+static int motor_init(const struct device *dev)
+{
+    // struct motor_data *data = dev->data;
+    // k_thread_create(&data->thread, data->stack,
+    //                K_THREAD_STACK_SIZEOF(data->stack),
+    //                (k_thread_entry_t)motor_thread_entry,
+    //                (void *)dev, NULL, NULL,
+    //                K_PRIO_COOP(5), 0, K_NO_WAIT);
+    return 0;
+}
+
 
 /* 设备树节点定义 */
 #define LED0_NODE DT_ALIAS(led0)
 #define MOT12_BRK_PIN_NODE DT_NODELABEL(mot12_brk_pin)
 #define ENCODER_VCC DT_NODELABEL(encoder_vcc)
 #define W_DOG DT_NODELABEL(wdog)
-#define MOTOR0_NODE DT_INST(0, foc_ctrl_algo)
-#define MOTOR1_NODE DT_INST(1, foc_ctrl_algo)
-
+#define MOTOR0_NODE DT_NODELABEL(motor1)
+#define MOTOR1_NODE DT_NODELABEL(motor2)
 /* GPIO设备定义 */
 const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
 
@@ -75,27 +96,33 @@ static void motor_thread_entry(void *p1, void *p2, void *p3)
 
     k_msleep(1000);  // 初始化延时
 
-    /* 电机0初始化 */
-    const struct device *motor0 = DEVICE_DT_GET(MOTOR0_NODE);
     const struct gpio_dt_spec encoder_vcc = GPIO_DT_SPEC_GET(ENCODER_VCC, gpios);
     ret = gpio_pin_configure_dt(&encoder_vcc, GPIO_OUTPUT_ACTIVE);
     if (ret < 0) {
         printk("Error %d: Failed to configure brake pin\n", ret);
     }
+
+    /* 电机0初始化 */
+    const struct device *motor0 = DEVICE_DT_GET(MOTOR0_NODE);
     if (!device_is_ready(motor0)) {
         LOG_ERR("PWM motor1 device not ready");
         return;
     }
-    foc_start(motor0);
-    
+    const struct motor_config *cfg  = motor0->config;
+    const struct device *foc0= cfg->foc_dev;
+    foc_start(foc0);
+
     /* 电机1初始化 */
     const struct device *motor1 = DEVICE_DT_GET(MOTOR1_NODE);
     if (!device_is_ready(motor1)) {
         LOG_ERR("PWM motor1 device not ready");
         return;
     }
-    foc_start(motor1);	
-     
+    cfg  = motor1->config;
+    const struct device *foc1= cfg->foc_dev;
+    foc_start(foc1);    
+    // foc_start(motor1);	
+ 
     /* 看门狗循环 */
     while (1) {
         gpio_pin_toggle_dt(&w_dog);
@@ -121,3 +148,19 @@ void motor_thread_creat(const struct device *dev)
                    0,
                    K_NO_WAIT);
 }
+
+
+#define MOTOR_INIT(n) \
+    static const struct motor_config motor_cfg_##n = { \
+        .foc_dev = DEVICE_DT_GET(DT_PHANDLE(DT_DRV_INST(n), control_algorithm)), \
+    }; \
+    static struct motor_data motor_data_##n; \
+    DEVICE_DT_INST_DEFINE(n, motor_init, NULL, \
+                         &motor_data_##n, \
+                         &motor_cfg_##n, \
+                         POST_KERNEL, \
+                         99, \
+                         NULL);
+
+DT_INST_FOREACH_STATUS_OKAY(MOTOR_INIT)
+

@@ -48,7 +48,18 @@
 	aliases {
 		led0 = &green_led;
 	};
-
+    motors {
+        motor1: motor_1 {
+            compatible = "motor-bldc";
+            control-algorithm = <&foc1>;
+            status = "okay";
+        };
+        motor2: motor_2 {
+            compatible = "motor-bldc";
+            control-algorithm = <&foc2>;
+            status = "okay";
+        };
+    };
 	control_algorithm {
 		foc1:ctrl_algo1{
 			compatible = "foc-ctrl-algo";
@@ -56,6 +67,7 @@
 			pwm = <&pwm1>;
 			feedback = <&abz_hall2>;
 			modulate = <1>;
+			status = "okay";
 		};
 		foc2:ctrl_algo2{
 			compatible = "foc-ctrl-algo";
@@ -63,6 +75,7 @@
 			pwm = <&pwm8>;
 			feedback = <&abz_hall1>;
 			modulate = <0>;
+			status = "okay";
 		};
 	};
 };

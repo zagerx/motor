@@ -1,20 +1,19 @@
 # Copyright 2023 SyriusRobotics
 # SPDX-License-Identifier: Apache-2.0
 
-description: BLDC Motor
+description: BLDC 电机设备绑定
 
-compatible: "bldc-motor"
+compatible: "motor-bldc"
+
+include: [base.yaml]
 
 properties:
-  currsmp:
-    type: phandle
-    required: false
-
-  feedback:
-    type: phandle
-    required: false
-
-  pwm:
+  control-algorithm:
     type: phandle
     required: true
-
+    description: 指向 FOC 控制算法的句柄
+  
+  status:
+    type: string
+    required: false
+    description: 设备状态 (okay/disabled)

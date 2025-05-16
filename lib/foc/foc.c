@@ -172,7 +172,7 @@
          &foc_data_##n, \
          &foc_cfg_##n, \
          POST_KERNEL, \
-         99, \
+         98, \
          &foc_api_##n \
      );
  
