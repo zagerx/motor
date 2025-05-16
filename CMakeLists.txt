@@ -9,10 +9,12 @@ add_subdirectory(drivers)
 add_subdirectory(lib)
 add_subdirectory(canard)
 
-zephyr_include_directories(include)
-zephyr_include_directories(ProtocolV4/uavcan/.cFolder)
-zephyr_include_directories(ProtocolV4/uavcan/libcanard/libcanard)
-
+zephyr_include_directories(
+    include
+    ProtocolV4/uavcan/.cFolder 
+    ProtocolV4/uavcan/libcanard/libcanard
+    statemachine
+)
 zephyr_library_sources(ProtocolV4/uavcan/libcanard/libcanard/canard.c)
 
 target_sources(app PRIVATE modulestest/main.c)
