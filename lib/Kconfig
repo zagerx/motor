@@ -1,10 +1,39 @@
-# Copyright (c) 2021 Teslabs Engineering S.L.
-# SPDX-License-Identifier: Apache-2.0
+config MOTOR_INIT_PRIORITY
+    int "Motor control device initialization priority"
+    range 0 99
+    default 99
+    help
+      Initialization priority for motor control devices (lower value = earlier init).
+      Must be higher than dependent devices (FOC/PWM/Feedback).
 
-#menu "Libraries"
+config FOC_INIT_PRIORITY
+    int "FOC algorithm initialization priority" 
+    range 0 98
+    default 98
+    help
+      Initialization priority for FOC control algorithms.
+      Must be higher than PWM/current sampling devices.
 
-#rsource "control/Kconfig"
-#rsource "svm/Kconfig"
-#rsource "utils/Kconfig"
+config FEEDBACK_INIT_PRIORITY
+    int "Feedback sensor initialization priority"
+    range 0 97  
+    default 97
+    help
+      Initialization priority for motor feedback sensors (encoders/hall).
+      Must initialize before FOC/motor control.
 
-#endmenu
+config PWMX_STM32_INIT_PRIORITY
+    int "PWM driver initialization priority"
+    range 0 96
+    default 96  
+    help
+      Initialization priority for STM32 PWM drivers.
+      Must initialize before current sampling/FOC.
+
+config CURRSMP_INIT_PRIORITY
+    int "Current sampling initialization priority"
+    range 0 95
+    default 95
+    help
+      Initialization priority for current sampling devices.
+      Must initialize before FOC algorithms.

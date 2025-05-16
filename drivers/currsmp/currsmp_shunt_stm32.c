@@ -302,7 +302,7 @@
                    &currsmp_shunt_stm32_data_##n,\
                    &currsmp_shunt_stm32_config_##n,\
                    PRE_KERNEL_1,\
-                   70, \
+                   CONFIG_CURRSMP_INIT_PRIORITY, \
                    &currsmp_shunt_stm32_driver_api);
  
  /** @brief Generate device instances. */

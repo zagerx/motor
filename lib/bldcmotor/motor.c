@@ -40,12 +40,6 @@ struct motor_data {
 
 static int motor_init(const struct device *dev)
 {
-    // struct motor_data *data = dev->data;
-    // k_thread_create(&data->thread, data->stack,
-    //                K_THREAD_STACK_SIZEOF(data->stack),
-    //                (k_thread_entry_t)motor_thread_entry,
-    //                (void *)dev, NULL, NULL,
-    //                K_PRIO_COOP(5), 0, K_NO_WAIT);
     return 0;
 }
 
@@ -93,14 +87,14 @@ static void motor_thread_entry(void *p1, void *p2, void *p3)
     if (ret < 0) {
         printk("Error %d: Failed to configure brake pin\n", ret);
     }
-
-    k_msleep(1000);  // 初始化延时
-
+    /* 编码器供电引脚初始化 */
     const struct gpio_dt_spec encoder_vcc = GPIO_DT_SPEC_GET(ENCODER_VCC, gpios);
     ret = gpio_pin_configure_dt(&encoder_vcc, GPIO_OUTPUT_ACTIVE);
     if (ret < 0) {
         printk("Error %d: Failed to configure brake pin\n", ret);
     }
+
+    k_msleep(1000);  // 初始化延时
 
     /* 电机0初始化 */
     const struct device *motor0 = DEVICE_DT_GET(MOTOR0_NODE);
@@ -121,9 +115,7 @@ static void motor_thread_entry(void *p1, void *p2, void *p3)
     cfg  = motor1->config;
     const struct device *foc1= cfg->foc_dev;
     foc_start(foc1);    
-    // foc_start(motor1);	
  
-    /* 看门狗循环 */
     while (1) {
         gpio_pin_toggle_dt(&w_dog);
         k_msleep(1);
@@ -134,7 +126,7 @@ static void motor_thread_entry(void *p1, void *p2, void *p3)
  * @brief 创建电机控制线程
  * @param dev 设备指针(未使用)
  */
-void motor_thread_creat(const struct device *dev)
+void creat_motor_thread(const struct device *dev)
 {
     static struct motor_thread_data thread_data __aligned(4);
     k_thread_create(&thread_data.thread,
@@ -159,7 +151,7 @@ void motor_thread_creat(const struct device *dev)
                          &motor_data_##n, \
                          &motor_cfg_##n, \
                          POST_KERNEL, \
-                         99, \
+                         CONFIG_MOTOR_INIT_PRIORITY, \
                          NULL);
 
 DT_INST_FOREACH_STATUS_OKAY(MOTOR_INIT)

@@ -172,7 +172,7 @@
          &foc_data_##n, \
          &foc_cfg_##n, \
          POST_KERNEL, \
-         98, \
+         CONFIG_FOC_INIT_PRIORITY, \
          &foc_api_##n \
      );
  

@@ -407,7 +407,7 @@ static float _normalize_angle(float angle)
      DEVICE_DT_INST_DEFINE(n, stm32_abz_hall_init, NULL,            \
                 &abz_hall_stm32_data_##n,           \
                 &abz_hall_stm32_cfg_##n,            \
-                PRE_KERNEL_1, 86, \
+                PRE_KERNEL_1, CONFIG_FEEDBACK_INIT_PRIORITY, \
                 &driver_feedback           \
       );
  

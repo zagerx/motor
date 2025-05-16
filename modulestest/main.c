@@ -18,13 +18,13 @@ LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
 /* 1000 msec = 1 sec */
 #define SLEEP_TIME_MS   1
 
-extern void motor_thread_creat(const struct device *dev);
+extern void creat_motor_thread(const struct device *dev);
 extern void creat_canard_thread(void);
 
 int main(void)
 {
 	creat_canard_thread(); 
-	motor_thread_creat(NULL);
+	creat_motor_thread(NULL);
 	while (1) {
         k_msleep(1000);
 	}

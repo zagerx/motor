@@ -214,7 +214,7 @@
 		 NULL, NULL, \
 		 &pwm_stm32_config_##n, \
 		 PRE_KERNEL_1, \
-		 80, \
+		 CONFIG_PWMX_STM32_INIT_PRIORITY, \
 		 &pwm_stm32_api_##n);
  
  /* Initialize all instances */
