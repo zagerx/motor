@@ -16,5 +16,6 @@ zephyr_include_directories(
     statemachine
 )
 zephyr_library_sources(ProtocolV4/uavcan/libcanard/libcanard/canard.c)
+zephyr_library_sources(statemachine/statemachine.c)
 
 target_sources(app PRIVATE modulestest/main.c)

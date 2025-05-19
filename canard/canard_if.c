@@ -182,7 +182,7 @@ static void subscribe_services(void)
     canardRxSubscribe(&canard, CanardTransferKindRequest, 117, 16, CANARD_DEFAULT_TRANSFER_ID_TIMEOUT_USEC, &sub_setTar);
                  
 }
-
+#include <lib/bldcmotor/motor.h>
 // 电机使能处理函数
 static void handle_motor_enable(CanardRxTransfer* transfer)
 {
@@ -198,8 +198,12 @@ static void handle_motor_enable(CanardRxTransfer* transfer)
         // 执行电机控制
         if(req.enable_state == 0) {
             LOG_INF("motor_start()");  // 需实现电机启动函数
+            // motor_set_speedmode();
+            motor_set_mode(MOTOR_CMD_SET_SPEED_MODE);
         } else {
             LOG_INF("motor_stop()");   // 需实现电机停止函数
+            // motor_set_loopmode();
+            motor_set_mode(MOTOR_CMD_SET_LOOP_MODE);
         }
         // 发送响应
         custom_data_types_dinosaurs_actuator_wheel_motor_Enable_Response_1_0 resp = {

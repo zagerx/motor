@@ -49,12 +49,12 @@
 		led0 = &green_led;
 	};
     motors {
-        motor1: motor_1 {
+        motor0: motor_0 {
             compatible = "motor-bldc";
             control-algorithm = <&foc1>;
             status = "okay";
         };
-        motor2: motor_2 {
+        motor1: motor_1 {
             compatible = "motor-bldc";
             control-algorithm = <&foc2>;
             status = "okay";
