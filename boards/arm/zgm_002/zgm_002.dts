@@ -50,30 +50,30 @@
 	};
     motors {
         motor0: motor_0 {
-            compatible = "motor-bldc";
-            control-algorithm = <&foc1>;
-            status = "okay";
+			compatible = "motor-bldc";
+			control-algorithm = <&foc1>;
+			feedback = <&abz_hall2>;  // 添加feedback属性
+			currsmp = <&currsmp1>;
+			pwm = <&pwm1>;
+			status = "okay";
         };
         motor1: motor_1 {
-            compatible = "motor-bldc";
-            control-algorithm = <&foc2>;
-            status = "okay";
+			compatible = "motor-bldc";
+			control-algorithm = <&foc2>;
+			feedback = <&abz_hall1>;  // 添加feedback属      
+			currsmp = <&currsmp2>;
+			pwm = <&pwm8>;			
+		    status = "okay";
         };
     };
 	control_algorithm {
 		foc1:ctrl_algo1{
 			compatible = "foc-ctrl-algo";
-			currsmp = <&currsmp1>;
-			pwm = <&pwm1>;
-			feedback = <&abz_hall2>;
 			modulate = <1>;
 			status = "okay";
 		};
 		foc2:ctrl_algo2{
 			compatible = "foc-ctrl-algo";
-			currsmp = <&currsmp2>;
-			pwm = <&pwm8>;
-			feedback = <&abz_hall1>;
 			modulate = <0>;
 			status = "okay";
 		};
@@ -162,26 +162,29 @@
     };
 };
 
+
+&timers4 {
+	abz_hall2: abz_hall {
+		compatible = "st,stm32-abz-hall";
+		pinctrl-0 = <&tim4_ch1_pb6 &tim4_ch2_pb7>;
+		pinctrl-names = "default";		
+		lines = <4096>;
+		pole-pairs = <15>;
+		hu-gpios = <&gpiod 1 GPIO_ACTIVE_HIGH>;
+		hv-gpios = <&gpiob 2 GPIO_ACTIVE_HIGH>;
+		hw-gpios = <&gpiod 0 GPIO_ACTIVE_HIGH>;		
+		
+		status = "okay";
+	};	
+
+};
 &timers3 {
 	abz_hall1: abz_hall {
 		compatible = "st,stm32-abz-hall";
 		pinctrl-0 = <&tim3_ch1_pb4 &tim3_ch2_pb5>;
 		pinctrl-names = "default";
-		lines = <4096>;
-		pole-pairs = <15>;
-		hu-gpios = <&gpiod 1 GPIO_ACTIVE_HIGH>;
-		hv-gpios = <&gpiob 2 GPIO_ACTIVE_HIGH>;
-		hw-gpios = <&gpiod 0 GPIO_ACTIVE_HIGH>;
-		status = "okay";
-	};
-};
 
-&timers4 {
-	abz_hall2: abz_hall {
-		compatible = "st,stm32-abz-hall";
 
-		pinctrl-0 = <&tim4_ch1_pb6 &tim4_ch2_pb7>;
-		pinctrl-names = "default";
 		lines = <4096>;
 		pole-pairs = <15>;
 		hu-gpios = <&gpioc 14 GPIO_ACTIVE_HIGH>;

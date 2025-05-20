@@ -12,7 +12,19 @@ properties:
     type: phandle
     required: true
     description: 指向 FOC 控制算法的句柄
-  
+  currsmp:
+    type: phandle
+    required: true
+    description: FOC SVPWM 
+  feedback:    
+    type: phandle
+    required: true 
+    description: FOC SVPWM out          
+  pwm:
+    type: phandle
+    required: true
+    description: FOC SVPWM out    
+
   status:
     type: string
     required: false

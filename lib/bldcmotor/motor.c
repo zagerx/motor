@@ -148,7 +148,7 @@ static void foc_curr_regulator(void *ctx)
     }
 
     /* Perform inverse Park transform */
-    inv_park_f32(0.0f, 0.02f, &alph, &beta, sin_the, cos_the);
+    inv_park_f32(0.01f, 0.01f, &alph, &beta, sin_the, cos_the);
     
     /* Generate PWM outputs */
     foc_modulate(foc,alph,beta);
@@ -242,10 +242,10 @@ void motor_task(void *obj)
 #define MOTOR_INIT(n) \
     fsm_cb_t fsm_##n;\
     static const struct motor_config motor_cfg_##n = { \
-        .foc_dev = DEVICE_DT_GET(DT_PHANDLE(DT_DRV_INST(n), control_algorithm)), \
-        .pwm = DEVICE_DT_GET(DT_INST(n, st_stm32_pwm_custom)), \
-        .currsmp = DEVICE_DT_GET(DT_INST(n, st_stm32_currsmp_shunt)), \
-        .feedback = DEVICE_DT_GET(DT_INST(n, st_stm32_abz_hall)), \
+        .foc_dev = DEVICE_DT_GET(DT_INST_PHANDLE(n, control_algorithm)), \
+        .pwm = DEVICE_DT_GET(DT_INST_PHANDLE(n, pwm)), \
+        .currsmp = DEVICE_DT_GET(DT_INST_PHANDLE(n, currsmp)), \
+        .feedback = DEVICE_DT_GET(DT_INST_PHANDLE(n, feedback)), \
         .fsm = &fsm_##n,\
     }; \
     static struct motor_data motor_data_##n; \
