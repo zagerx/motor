@@ -136,10 +136,12 @@ static void foc_curr_regulator(void *ctx)
     /* Get current measurements */
     currsmp_get_currents(currsmp, &current_now);
     data->eangle = feedback_get_eangle(cfg->feedback);
-
     /* Generate test signals for open loop */
     float alph, beta, sin_the, cos_the;
-    sin_cos_f32((data->eangle * 57.2957795131f), &sin_the, &cos_the);
+    sin_cos_f32(((data->eangle - _PI_2_) * 57.2957795131f), &sin_the, &cos_the);
+
+    clarke_f32(current_now.i_a,current_now.i_b,&(data->v_alpha),&(data->v_beta));
+    park_f32((data->v_alpha),(data->v_beta),&(data->i_d),&(data->i_q),sin_the,cos_the);
     
     /* Update rotor angle */
     data->self_theta += 0.0008f;
@@ -148,7 +150,8 @@ static void foc_curr_regulator(void *ctx)
     }
 
     /* Perform inverse Park transform */
-    inv_park_f32(0.01f, 0.01f, &alph, &beta, sin_the, cos_the);
+    sin_cos_f32((data->eangle * 57.2957795131f), &sin_the, &cos_the);
+    inv_park_f32(0.00f, -0.02f, &alph, &beta, sin_the, cos_the);
     
     /* Generate PWM outputs */
     foc_modulate(foc,alph,beta);

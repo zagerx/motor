@@ -3,7 +3,8 @@
  * @{
  */
 
- #include <zephyr/logging/log.h>
+ #include "stm32h7xx_ll_adc.h"
+#include <zephyr/logging/log.h>
  #include <zephyr/device.h>
  #include <zephyr/drivers/adc.h>
  #include <zephyr/irq.h>
@@ -92,9 +93,12 @@
      data->adc_channl_b = LL_ADC_INJ_ReadConversionData12(cfg->adc, LL_ADC_INJ_RANK_2);
      data->adc_channl_c = LL_ADC_INJ_ReadConversionData12(cfg->adc, LL_ADC_INJ_RANK_3);
  
-     curr->i_a = (float)data->adc_channl_a / (2048);
-     curr->i_b = (float)data->adc_channl_b / (2048);
-     curr->i_c = (float)data->adc_channl_c / (2048);
+    // 2. 改进转换公式
+    const float scale = 1.0f / 2.0f;
+    curr->i_a = ((int16_t)(data->adc_channl_a - 2048)) * scale;
+    curr->i_b = ((int16_t)(data->adc_channl_b - 2048)) * scale;
+    curr->i_c = ((int16_t)(data->adc_channl_c - 2048)) * scale;
+
  }
  
  /** @brief STM32 Shunt Current Sampling Driver API. */
@@ -198,17 +202,17 @@
          LL_ADC_SetChannelSingleDiff(cfg->adc, LL_ADC_CHANNEL_15, LL_ADC_SINGLE_ENDED);
          LL_ADC_SetChannelPreselection(cfg->adc, LL_ADC_CHANNEL_15);
        
-         LL_ADC_INJ_SetSequencerRanks(cfg->adc, LL_ADC_INJ_RANK_1, LL_ADC_CHANNEL_8);
-         LL_ADC_SetChannelSamplingTime(cfg->adc, LL_ADC_CHANNEL_8, LL_ADC_SAMPLINGTIME_1CYCLE_5);
-         LL_ADC_SetChannelSingleDiff(cfg->adc, LL_ADC_CHANNEL_8, LL_ADC_SINGLE_ENDED);
-       
-         LL_ADC_INJ_SetSequencerRanks(cfg->adc, LL_ADC_INJ_RANK_2, LL_ADC_CHANNEL_9);
+         LL_ADC_INJ_SetSequencerRanks(cfg->adc, LL_ADC_INJ_RANK_3, LL_ADC_CHANNEL_9);
          LL_ADC_SetChannelSamplingTime(cfg->adc, LL_ADC_CHANNEL_9, LL_ADC_SAMPLINGTIME_1CYCLE_5);
          LL_ADC_SetChannelSingleDiff(cfg->adc, LL_ADC_CHANNEL_9, LL_ADC_SINGLE_ENDED);
        
-         LL_ADC_INJ_SetSequencerRanks(cfg->adc, LL_ADC_INJ_RANK_3, LL_ADC_CHANNEL_5);
+         LL_ADC_INJ_SetSequencerRanks(cfg->adc, LL_ADC_INJ_RANK_1, LL_ADC_CHANNEL_5);
          LL_ADC_SetChannelSamplingTime(cfg->adc, LL_ADC_CHANNEL_5, LL_ADC_SAMPLINGTIME_1CYCLE_5);
-         LL_ADC_SetChannelSingleDiff(cfg->adc, LL_ADC_CHANNEL_5, LL_ADC_SINGLE_ENDED);       
+         LL_ADC_SetChannelSingleDiff(cfg->adc, LL_ADC_CHANNEL_5, LL_ADC_SINGLE_ENDED);
+       
+         LL_ADC_INJ_SetSequencerRanks(cfg->adc, LL_ADC_INJ_RANK_2, LL_ADC_CHANNEL_8);
+         LL_ADC_SetChannelSamplingTime(cfg->adc, LL_ADC_CHANNEL_8, LL_ADC_SAMPLINGTIME_1CYCLE_5);
+         LL_ADC_SetChannelSingleDiff(cfg->adc, LL_ADC_CHANNEL_8, LL_ADC_SINGLE_ENDED);       
          
          LL_ADC_SetChannelPreselection(cfg->adc,LL_ADC_CHANNEL_8);
          LL_ADC_SetChannelPreselection(cfg->adc,LL_ADC_CHANNEL_9);
