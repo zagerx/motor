@@ -4,6 +4,7 @@
  */
 
  #include "stm32h7xx_ll_adc.h"
+#include <stdint.h>
 #include <zephyr/logging/log.h>
  #include <zephyr/device.h>
  #include <zephyr/drivers/adc.h>
@@ -12,7 +13,7 @@
  #include <zephyr/drivers/clock_control/stm32_clock_control.h>
  #include <stm32h7xx_ll_gpio.h>
  #include <drivers/currsmp.h>
- 
+ #include <algorithmlib/filter.h>
  LOG_MODULE_REGISTER(currsmp_shunt_stm32, LOG_LEVEL_DBG);
  #define DT_DRV_COMPAT st_stm32_currsmp_shunt
  
@@ -42,7 +43,21 @@
      uint32_t adc_channl_b;
      /** ADC channel data for phase C. */
      uint32_t adc_channl_c;
- };
+
+     uint32_t adc_f_channl_a;
+     /** ADC channel data for phase B. */
+     uint32_t adc_f_channl_b;
+     /** ADC channel data for phase C. */
+     uint32_t adc_f_channl_c;
+
+     int16_t adc_average;
+
+    moving_avg_t *average_filter;
+    moving_avg_t *cha_filter;
+    moving_avg_t *chb_filter;
+    moving_avg_t *chc_filter;
+
+};
  
  /** @brief ADC interrupt service routine.
   *
@@ -86,19 +101,26 @@
  static void currsmp_shunt_stm32_get_currents(const struct device *dev,
                           struct currsmp_curr *curr)
  {
-     const struct currsmp_shunt_stm32_config *cfg = dev->config;
-     struct currsmp_shunt_stm32_data *data = dev->data;
+    const struct currsmp_shunt_stm32_config *cfg = dev->config;
+    struct currsmp_shunt_stm32_data *data = dev->data;
       
-     data->adc_channl_a = LL_ADC_INJ_ReadConversionData12(cfg->adc, LL_ADC_INJ_RANK_1);
-     data->adc_channl_b = LL_ADC_INJ_ReadConversionData12(cfg->adc, LL_ADC_INJ_RANK_2);
-     data->adc_channl_c = LL_ADC_INJ_ReadConversionData12(cfg->adc, LL_ADC_INJ_RANK_3);
- 
-    // 2. 改进转换公式
-    const float scale = 1.0f / 2.0f;
-    curr->i_a = ((int16_t)(data->adc_channl_a - 2048)) * scale;
-    curr->i_b = ((int16_t)(data->adc_channl_b - 2048)) * scale;
-    curr->i_c = ((int16_t)(data->adc_channl_c - 2048)) * scale;
+    data->adc_channl_a = LL_ADC_INJ_ReadConversionData12(cfg->adc, LL_ADC_INJ_RANK_1);
+    data->adc_channl_b = LL_ADC_INJ_ReadConversionData12(cfg->adc, LL_ADC_INJ_RANK_2);
+    data->adc_channl_c = LL_ADC_INJ_ReadConversionData12(cfg->adc, LL_ADC_INJ_RANK_3);
 
+    data->adc_f_channl_a = moving_avg_update(data->cha_filter,data->adc_channl_a);//TODO
+    data->adc_f_channl_b = moving_avg_update(data->chb_filter,data->adc_channl_b);//TODO
+    data->adc_f_channl_c = moving_avg_update(data->chc_filter,data->adc_channl_c);//TODO
+    //计算偏置
+    data->adc_average = moving_avg_update(data->average_filter, (data->adc_channl_a+data->adc_channl_b+data->adc_channl_c)/3);
+    // 2. 改进转换公式
+    const float scale = 0.06012f;
+    curr->i_a = ((int16_t)(data->adc_channl_a - data->adc_average)) * scale;
+    curr->i_b = ((int16_t)(data->adc_channl_b - data->adc_average)) * scale;
+    curr->i_c = ((int16_t)(data->adc_channl_c - data->adc_average)) * scale;
+    // curr->i_a = ((int16_t)(data->adc_channl_a - 2048)) * scale;
+    // curr->i_b = ((int16_t)(data->adc_channl_b - 2048)) * scale;
+    // curr->i_c = ((int16_t)(data->adc_channl_c - 2048)) * scale;
  }
  
  /** @brief STM32 Shunt Current Sampling Driver API. */
@@ -163,7 +185,6 @@
          ADC_INJ_InitStruct.TrigAuto = LL_ADC_INJ_TRIG_INDEPENDENT;
          LL_ADC_INJ_Init(cfg->adc, &ADC_INJ_InitStruct);        
      }
- 
  
      LL_ADC_INJ_SetQueueMode(cfg->adc, LL_ADC_INJ_QUEUE_DISABLE);
      LL_ADC_SetOverSamplingScope(cfg->adc, LL_ADC_OVS_DISABLE);
@@ -240,6 +261,14 @@
          LL_ADC_DisableIT_JEOS(ADC2);        
      }
      LOG_INF("currsmp_shunt_stm32_init");
+
+     /*filter init*/
+     struct currsmp_shunt_stm32_data* data = dev->data;
+     moving_avg_init(data->average_filter,NULL,0);
+     moving_avg_init(data->cha_filter,NULL,0);
+     moving_avg_init(data->chb_filter,NULL,0);
+     moving_avg_init(data->chc_filter,NULL,0);
+
      return 0;
  }
  
@@ -298,8 +327,32 @@
          .slave_mode_flag = DT_INST_PROP(n, adc_slave),\
          CURRSMP_SHUNT_STM32_IRQ_FUNC(n)			\
      };								\
-                                     \
-     static struct currsmp_shunt_stm32_data currsmp_shunt_stm32_data_##n; \
+     static int16_t buffer_cha_##n[32];\
+     static moving_avg_t filter_cha_##n = {\
+        .buffer = (buffer_cha_##n),\
+        .size = 32\
+     };\
+     static int16_t buffer_chb_##n[32];\
+     static moving_avg_t filter_chb_##n = {\
+        .buffer = (buffer_chb_##n),\
+        .size = 32\
+     };\
+     static int16_t buffer_chc_##n[32];\
+     static moving_avg_t filter_chc_##n = {\
+        .buffer = (buffer_chc_##n),\
+        .size = 32\
+     };\
+     static int16_t buffer_average_##n[32];\
+     static moving_avg_t filter_average_##n = {\
+        .buffer = (buffer_average_##n),\
+        .size = 32\
+     };\
+     static struct currsmp_shunt_stm32_data currsmp_shunt_stm32_data_##n = {\
+        .cha_filter = &(filter_cha_##n),\
+        .chb_filter = &(filter_chb_##n),\
+        .chc_filter = &(filter_chc_##n),\
+        .average_filter = &(filter_average_##n),\
+    }; \
                                      \
      DEVICE_DT_INST_DEFINE(n, &currsmp_shunt_stm32_init,\
                    NULL,	\

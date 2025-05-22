@@ -8,7 +8,8 @@
  * - Open loop control
  */
 
- #include "zephyr/device.h"
+ #include "algorithmlib/pid.h"
+#include "zephyr/device.h"
  
  #include <zephyr/logging/log.h>
  #include <lib/foc/foc.h>
@@ -56,7 +57,9 @@
   */
  static int foc_init(const struct device* dev)
  {
-
+    const struct foc_data *data = dev->data;
+    pid_init((pid_cb_t*)&(data->id_pid), 0.0f, 0.0f, 0.0f,0.0f,0.0f);
+    pid_init((pid_cb_t*)&(data->iq_pid), 0.0f, 0.0f, 0.0f,0.0f,0.0f);
     return 0;
  }
 

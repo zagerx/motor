@@ -12,7 +12,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
- #include <statemachine.h>
+ #include <statemachine/statemachine.h>
  #include <lib/bldcmotor/motor.h>
  #include <lib/foc/foc.h>//TODO
  #include <drivers/currsmp.h>

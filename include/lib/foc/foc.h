@@ -6,14 +6,16 @@
 
 #include "zephyr/device.h"
 #include <lib/focutils/svm/svm.h>
+#include <algorithmlib/pid.h>
+#include <sys/types.h>
 
  /* FOC runtime data */
  struct foc_data {
     svm_t *svm_handle;              /* Space Vector Modulation handle */
 
     float self_theta;               /* Internal theta for open loop */
-    float test_a;                   /* Test variable */
-    
+    pid_cb_t id_pid;
+    pid_cb_t iq_pid;
     /* Read only variables */
     float i_d, i_q;                 /* D/Q axis currents */
     float rads;                     /* Rotor speed (rad/s) */

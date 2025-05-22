@@ -13,9 +13,11 @@ zephyr_include_directories(
     include
     ProtocolV4/uavcan/.cFolder 
     ProtocolV4/uavcan/libcanard/libcanard
-    statemachine
+    CommonLibrary
 )
 zephyr_library_sources(ProtocolV4/uavcan/libcanard/libcanard/canard.c)
-zephyr_library_sources(statemachine/statemachine.c)
+zephyr_library_sources(CommonLibrary/statemachine/statemachine.c)
+zephyr_library_sources(CommonLibrary/algorithmlib/pid.c)
+zephyr_library_sources(CommonLibrary/algorithmlib/filter.c)
 
 target_sources(app PRIVATE modulestest/main.c)

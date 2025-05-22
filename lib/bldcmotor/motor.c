@@ -12,6 +12,11 @@
  */
 
 /* System includes */
+#include "algorithmlib/pid.h"
+#include "stm32h723xx.h"
+// #include "stm32h7xx_hal_gpio.h"
+#include "stm32h7xx_ll_gpio.h"
+
 #include "zephyr/device.h"
 #include <stdint.h>
 #include <zephyr/kernel.h>
@@ -24,7 +29,7 @@
 #include <drivers/currsmp.h>
 #include <drivers/pwm.h>
 #include <drivers/feedback.h>
-#include <statemachine.h>
+#include <statemachine/statemachine.h>
 
 /* Device tree compatibility string */
 #define DT_DRV_COMPAT motor_bldc
@@ -100,6 +105,7 @@ static void foc_curr_regulator(void *ctx)
     struct currsmp_curr current_now;
 
     /* Get current measurements */
+    LL_GPIO_SetOutputPin(GPIOE, GPIO_PIN_1);
     currsmp_get_currents(currsmp, &current_now);
     data->eangle = feedback_get_eangle(cfg->feedback);
     /* Generate test signals for open loop */
@@ -114,16 +120,22 @@ static void foc_curr_regulator(void *ctx)
     if (data->self_theta > 6.28f) {
         data->self_theta = 0.0f;
     }
+    float d_out,q_out;
+    d_out = pid_contrl((pid_cb_t *)(&data->id_pid), 0.0f, data->i_d);
+    // d_out = 0.0f;
+    // q_out = pid_contrl((pid_cb_t *)(&data->iq_pid), -0.8f, data->i_q);
+    q_out = -0.02f;
 
     /* Perform inverse Park transform */
     sin_cos_f32((data->eangle * 57.2957795131f), &sin_the, &cos_the);
-    inv_park_f32(0.00f, -0.02f, &alph, &beta, sin_the, cos_the);
+    inv_park_f32(d_out, q_out, &alph, &beta, sin_the, cos_the);
     
     /* Generate PWM outputs */
     foc_modulate(foc,alph,beta);
     svm_t *svm = data->svm_handle;
     pwm_set_phase_voltages(cfg->pwm, svm->duties.a, svm->duties.b, svm->duties.c);
-    data->test_a = svm->duties.a * 10000.0f;
+    LL_GPIO_ResetOutputPin(GPIOE, GPIO_PIN_1);
+
 }
 
 /**
@@ -143,7 +155,13 @@ static int motor_init(const struct device *dev)
     /* Configure current sampling */
     currsmp_configure(currsmp, foc_curr_regulator, (void *)dev);
     LOG_INF("foc_init name: %s", dev->name);   
+   
+    // pid_cb_t *id_pid,*iq_pid;
+    const struct device *foc = cfg->foc_dev;
+    struct foc_data *data = foc->data;
     
+    pid_init(&(data->id_pid),0.002f,0.0001f,1.0f,12.0f,-12.0f);
+    pid_init(&(data->iq_pid),0.002f,0.0001f,1.0f,12.0f,-12.0f);
     /* Initialize state machine */
     statemachine_init(cfg->fsm, dev->name, motor_open_loop_mode, (void *)dev) ;
     return 0;
