@@ -1,6 +1,3 @@
 [submodule "ProtocolV4"]
 	path = ProtocolV4
 	url = https://github.com/zagerx/ProtocolV4
-[submodule "statemachine"]
-	path = statemachine
-	url = https://github.com/zagerx/statemachine
