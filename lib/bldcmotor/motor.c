@@ -81,40 +81,6 @@ void motor_set_mode(int16_t mode)
 }
 
 /**
- * @brief Force all motors into open loop mode
- *
- * Convenience function that sets all motors to open loop control mode.
- */
-void motor_set_loopmode(void)
-{
-    /* Get motor devices from device tree */
-    const struct device *motors[] = {
-    #if DT_NODE_HAS_STATUS(DT_NODELABEL(motor0), okay)
-            DEVICE_DT_GET(DT_NODELABEL(motor0)),
-    #endif
-    #if DT_NODE_HAS_STATUS(DT_NODELABEL(motor1), okay)
-            DEVICE_DT_GET(DT_NODELABEL(motor1))
-    #endif
-    };
-
-    const struct device *motor;
-    struct motor_data *data;
-
-    /* Set each motor to open loop mode */
-    for(uint8_t i = 0;i < ARRAY_SIZE(motors);i++)
-    {
-      if (!device_is_ready(motors[i])) 
-      {
-        LOG_ERR("Motor %d not ready", i);
-        continue;
-      }  
-      motor = motors[i];
-      data = motor->data;
-      data->cmd = MOTOR_CMD_SET_LOOP_MODE;
-    }
-}
-
-/**
  * @brief FOC current regulator callback
  * @param ctx Device context pointer
  *

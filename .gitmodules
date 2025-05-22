@@ -1,3 +1,6 @@
 [submodule "ProtocolV4"]
 	path = ProtocolV4
 	url = https://github.com/zagerx/ProtocolV4
+[submodule "CommonLibrary"]
+	path = CommonLibrary
+	url = git@github.com:zagerx/CommonLibrary.git

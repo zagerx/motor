@@ -32,6 +32,7 @@ enum motor_state{
     MOTOR_MODE_SPEED,
     MOTOR_MODE_POSI,
     MOTOR_MODE_TORQUE,
+    MOTOR_MODE_SELFCHECK
     };
     
     enum motor_cmd{
