@@ -98,7 +98,8 @@ void motor_set_status(int16_t status)
     
         const struct device *motor;
         struct motor_data *data;
-    
+        fsm_cb_t *fsm;
+        const struct motor_config *cfg;
         /* Process each motor */
         for(uint8_t i = 0;i < ARRAY_SIZE(motors);i++)
         {
@@ -110,16 +111,100 @@ void motor_set_status(int16_t status)
           
           motor = motors[i];
           data = motor->data;
-    
+          cfg = motor->config;
+          fsm = cfg->fsm;
           /* Set requested mode */
           if(status == MOTOR_STATE_STOP)
           {
             data->statue = MOTOR_STATE_STOP;
+            fsm->chState = MOTOR_STATE_STOP;
           }else if(status == MOTOR_STATE_CLOSED_LOOP){
             data->statue = MOTOR_STATE_CLOSED_LOOP;
+          }else if(status == MOTOR_STATE_INIT){
+            data->statue =  MOTOR_STATE_INIT;
+            fsm->chState = MOTOR_STATE_INIT;
           }
         }    
 }
+void motor_set_pid_param(float kp,float ki,float kc,float kd)
+{
+    /* Get motor devices from device tree */
+    const struct device *motors[] = {
+        #if DT_NODE_HAS_STATUS(DT_NODELABEL(motor0), okay)
+                DEVICE_DT_GET(DT_NODELABEL(motor0)),
+        #endif
+        #if DT_NODE_HAS_STATUS(DT_NODELABEL(motor1), okay)
+                DEVICE_DT_GET(DT_NODELABEL(motor1))
+        #endif
+        };
+
+        const struct device *motor;
+        struct motor_data *data;
+        const struct motor_config *cfg;
+        const struct device *foc;        
+        struct foc_data *f_data;
+        pid_cb_t *pid_h;
+        fsm_cb_t *fsm;
+        /* Process each motor */
+        for(uint8_t i = 0;i < ARRAY_SIZE(motors);i++)
+        {
+          if (!device_is_ready(motors[i])) 
+          {
+            LOG_ERR("Motor %d not ready", i);
+            continue;
+          }
+          motor = motors[i];
+
+          cfg = motor->config;
+          foc = cfg->foc_dev;
+          f_data = foc->data;          
+          pid_h = &(f_data->iq_pid);      
+          pid_init(pid_h, kp, ki, 1.0f,12.0f,-12.0f);
+          data = motor->data;
+          data->statue = MOTOR_STATE_PARAM_UPDATE;
+          fsm = cfg->fsm;
+          fsm->chState = MOTOR_STATE_PARAM_UPDATE;
+          /* Set requested mode */
+        }    
+}
+
+void motor_set_ref_param(int8_t flag, float current_ref,float speed_ref)
+{
+    /* Get motor devices from device tree */
+    const struct device *motors[] = {
+        #if DT_NODE_HAS_STATUS(DT_NODELABEL(motor0), okay)
+                DEVICE_DT_GET(DT_NODELABEL(motor0)),
+        #endif
+        #if DT_NODE_HAS_STATUS(DT_NODELABEL(motor1), okay)
+                DEVICE_DT_GET(DT_NODELABEL(motor1))
+        #endif
+        };
+
+        const struct device *motor;
+        const struct motor_config *cfg;
+        const struct device *foc;        
+        struct foc_data *f_data;
+
+        /* Process each motor */
+        for(uint8_t i = 0;i < ARRAY_SIZE(motors);i++)
+        {
+          if (!device_is_ready(motors[i])) 
+          {
+            LOG_ERR("Motor %d not ready", i);
+            continue;
+          }
+          motor = motors[i];
+
+          cfg = motor->config;
+          foc = cfg->foc_dev;
+          f_data = foc->data;
+          
+          f_data->iq_ref = current_ref;
+          f_data->speed_ref = speed_ref;
+        }    
+}
+
+
 /**
  * @brief FOC current regulator callback
  * @param ctx Device context pointer
@@ -129,7 +214,6 @@ void motor_set_status(int16_t status)
  * 2. Performs Park/Inverse Park transforms
  * 3. Generates PWM outputs via SVM
  */
- float test_targe = 0.0f;
 static void foc_curr_regulator(void *ctx)
 {    
     struct device *dev = (struct device*)ctx;
@@ -139,7 +223,11 @@ static void foc_curr_regulator(void *ctx)
     const struct device *foc = cfg->foc_dev;
     struct foc_data *data = foc->data;
     struct currsmp_curr current_now;
-
+    // const struct motor_data* m_data;
+    // if(data->iq_ref > -0.01f && data->iq_ref < 0.01f)
+    // {
+    //   return;
+    // } 
     /* Get current measurements */
     LL_GPIO_SetOutputPin(GPIOE, GPIO_PIN_1);
     currsmp_get_currents(currsmp, &current_now);
@@ -159,8 +247,8 @@ static void foc_curr_regulator(void *ctx)
     float d_out,q_out;
     d_out = pid_contrl((pid_cb_t *)(&data->id_pid), 0.0f, data->i_d);
     // d_out = 0.0f;
-    q_out = pid_contrl((pid_cb_t *)(&data->iq_pid), test_targe, data->i_q);
-    // q_out = -0.02f;
+    q_out = pid_contrl((pid_cb_t *)(&data->iq_pid), data->iq_ref, data->i_q);
+    q_out = -0.02f;
 
     /*
 

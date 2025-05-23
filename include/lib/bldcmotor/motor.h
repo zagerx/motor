@@ -17,6 +17,7 @@ struct motor_config {
 */
 enum motor_state{
     MOTOR_STATE_IDLE = USER,        // 空闲状态，未使能
+    MOTOR_STATE_PARAM_UPDATE,
     MOTOR_STATE_INIT,        // 初始化状态
     MOTOR_STATE_ALIGN,       // 电机对齐状态(初始位置校准)
     MOTOR_STATE_OPEN_LOOP,   // 开环运行状态
@@ -53,5 +54,8 @@ enum motor_state{
     
     extern void motor_set_mode(int16_t mode);
     extern void motor_set_status(int16_t status);
+    extern void motor_set_ref_param(int8_t flag, float current_ref,float speed_ref);
+    extern void motor_set_pid_param(float kp,float ki,float kc,float kd);
+
 
 #endif

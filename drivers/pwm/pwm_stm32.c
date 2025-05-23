@@ -79,7 +79,10 @@
  static void pwm_stm32_setduties(const struct device *dev, float a, float b, float c)
  {
 	 const struct pwm_stm32_config *cfg = dev->config;
-	 
+	 if(a>0.9f||b>0.9f||c>0.9f)
+	 {
+		return;
+	 } 
 	 LL_TIM_OC_SetCompareCH1(cfg->timer, (uint32_t)(cfg->timing_params[1]*a));
 	 LL_TIM_OC_SetCompareCH2(cfg->timer, (uint32_t)(cfg->timing_params[1]*b));
 	 LL_TIM_OC_SetCompareCH3(cfg->timer, (uint32_t)(cfg->timing_params[1]*c));
@@ -91,6 +94,9 @@
 static void pwm_stm32_setstatus(const struct device* dev,int8_t flag)
 {
 	const struct pwm_stm32_config *cfg = dev->config;
+	// LL_TIM_OC_SetCompareCH1(cfg->timer, 0);
+	// LL_TIM_OC_SetCompareCH2(cfg->timer, 0);
+	// LL_TIM_OC_SetCompareCH3(cfg->timer, 0);	
 	if(flag)
 	{
 		LL_TIM_CC_EnableChannel(cfg->timer,

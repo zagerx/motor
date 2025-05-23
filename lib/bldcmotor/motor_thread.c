@@ -62,6 +62,7 @@
          LOG_ERR("LED device not ready");
          return;
      }
+     k_msleep(1000);
      int ret = gpio_pin_configure_dt(&led, GPIO_OUTPUT_ACTIVE);
      if (ret < 0) {
          LOG_ERR("Failed to configure LED (err %d)", ret);

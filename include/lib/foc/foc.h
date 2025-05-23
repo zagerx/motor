@@ -1,6 +1,7 @@
 #ifndef ZEPHYR_INCLUDE_CONTROL_FOC_H_
 #define ZEPHYR_INCLUDE_CONTROL_FOC_H_
 
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -16,6 +17,8 @@
     float self_theta;               /* Internal theta for open loop */
     pid_cb_t id_pid;
     pid_cb_t iq_pid;
+    float id_ref,iq_ref;
+    float speed_ref;
     /* Read only variables */
     float i_d, i_q;                 /* D/Q axis currents */
     float rads;                     /* Rotor speed (rad/s) */

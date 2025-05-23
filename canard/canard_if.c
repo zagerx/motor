@@ -206,18 +206,18 @@ static void handle_motor_enable(CanardRxTransfer* transfer)
     if (custom_data_types_dinosaurs_actuator_wheel_motor_Enable_Request_1_0_deserialize_(&req, 
             transfer->payload, &inout_size) >= 0) {
         
-        LOG_INF("Motor enable cmd from node %d: %d", 
-               transfer->metadata.remote_node_id, req.enable_state);
+        // LOG_INF("Motor enable cmd from node %d: %d", 
+        //        transfer->metadata.remote_node_id, req.enable_state);
         
         // 执行电机控制
         if(req.enable_state == 0) {
-            LOG_INF("motor_start()");  // 需实现电机启动函数
+            // LOG_INF("motor_start()");  // 需实现电机启动函数
             // motor_set_speedmode();
             // motor_set_mode(MOTOR_CMD_SET_SPEED_MODE);
-            motor_set_status(MOTOR_STATE_CLOSED_LOOP);
+            motor_set_status(MOTOR_STATE_INIT);
 
         } else {
-            LOG_INF("motor_stop()");   // 需实现电机停止函数
+            // LOG_INF("motor_stop()");   // 需实现电机停止函数
             // motor_set_loopmode();
             // motor_set_mode(MOTOR_CMD_SET_LOOP_MODE);
             motor_set_status( MOTOR_STATE_STOP);
@@ -241,7 +241,6 @@ static void handle_motor_enable(CanardRxTransfer* transfer)
         canardTxPush(&txQueue, &canard, 0, &meta, buffer_size, buffer);
     }
 }
-extern float test_targe;
 static void handle_set_targe(CanardRxTransfer* transfer)
 {
     const uint8_t* data; size_t len; CanardNodeID sender_id;CanardPortID port_id;
@@ -258,7 +257,7 @@ static void handle_set_targe(CanardRxTransfer* transfer)
         /*
             
         */
-        test_targe = req.velocity.elements[0].meter_per_second;
+        motor_set_ref_param(0,req.velocity.elements[0].meter_per_second,0.0f);
         // 创建响应
         custom_data_types_dinosaurs_actuator_wheel_motor_SetTargetValue_Response_2_0 response = {
             .status = custom_data_types_dinosaurs_actuator_wheel_motor_SetTargetValue_Response_2_0_SET_SUCCESS
@@ -289,15 +288,15 @@ static void handle_pid_parameter(CanardRxTransfer* transfer)
     if (custom_data_types_dinosaurs_actuator_wheel_motor_PidParameter_Request_1_0_deserialize_(
         &req, transfer->payload, &inout_size) >= 0) 
     {
-        LOG_INF("Received PID params from node %d: [%.6f, %.6f, %.6f, %.6f]", 
-               transfer->metadata.remote_node_id,
-               (double)req.pid_params[0], (double)req.pid_params[1],
-               (double)req.pid_params[2], (double)req.pid_params[3]);
+        // LOG_INF("Received PID params from node %d: [%.6f, %.6f, %.6f, %.6f]", 
+        //        transfer->metadata.remote_node_id,
+        //        (double)req.pid_params[0], (double)req.pid_params[1],
+        //        (double)req.pid_params[2], (double)req.pid_params[3]);
         
         // 这里添加实际PID参数处理逻辑
         // 例如: pid_set_parameters(req.pid_params[0], req.pid_params[1], 
         //       req.pid_params[2], req.pid_params[3]);
-        
+        motor_set_pid_param(req.pid_params[0],req.pid_params[1],req.pid_params[2],req.pid_params[3]); 
         // 准备响应
         custom_data_types_dinosaurs_actuator_wheel_motor_PidParameter_Response_1_0 resp = {
             .status = custom_data_types_dinosaurs_actuator_wheel_motor_PidParameter_Response_1_0_SET_SUCCESS

@@ -13,6 +13,7 @@
  */
 
  #include "algorithmlib/pid.h"
+#include "zephyr/device.h"
 #include <statemachine/statemachine.h>
  #include <lib/bldcmotor/motor.h>
  #include <lib/foc/foc.h>//TODO
@@ -42,6 +43,10 @@
   */
  fsm_rt_t motor_open_loop_mode(fsm_cb_t *obj)
  {
+  const struct device* motor = obj->pdata;
+  const struct device* foc = ((const struct motor_config*)motor->config)->foc_dev;
+  struct foc_data* data = foc->data;
+  // const struct device *devc = ((const struct motor_config*)motor->config)->currsmp;
    switch (obj->chState) {
      case ENTER:
        LOG_INF("Enter %s loop mode",obj->name);
@@ -49,19 +54,29 @@
        obj->chState = MOTOR_STATE_IDLE;
        break;
      case MOTOR_STATE_INIT:
+       LOG_INF("motor status: MOTOR_STATE_INIT");
        motor_set_threephase_enable(obj->pdata);
-      //  pid_init();
+       data->iq_ref = 0.0f;
+       obj->chState = MOTOR_STATE_IDLE;
        break; 
+     case MOTOR_STATE_PARAM_UPDATE:
+       LOG_INF("motor status: MOTOR_STATE_PARAM_UPDATE");
+       motor_set_threephase_disable(obj->pdata);
+       obj->chState = MOTOR_STATE_IDLE;
+       break;
      case MOTOR_STATE_IDLE:
        /* Main operational state - handled by FOC */
        break;
      case MOTOR_STATE_STOP:
-      //  pid_reset(pid_cb_t *pid);
-       motor_set_threephase_disable(obj->pdata);
+      LOG_INF("motor status: MOTOR_STATE_STOP");
+      data->iq_ref = 0.0f; 
+      motor_set_threephase_disable(obj->pdata);
+       obj->chState = MOTOR_STATE_IDLE;
        break;
 
      case EXIT:
        LOG_INF("Exit loop mode");
+       motor_stop(obj->pdata);
        break;
        
      default:
