@@ -16,7 +16,8 @@ uavcan协议的接口文件
 #include <zephyr/drivers/can.h>
 #include <custom_data_types/dinosaurs/actuator/wheel_motor/Enable_1_0.h>
 #include <custom_data_types/dinosaurs/actuator/wheel_motor/SetTargetValue_2_0.h>
-
+#include <custom_data_types/dinosaurs/actuator/wheel_motor/PidParameter_1_0.h>
+#include <custom_data_types/dinosaurs/PortId_1_0.h>
 LOG_MODULE_REGISTER(canard_if, LOG_LEVEL_INF);
 
 #define CANARD_MEM_POOL_SIZE 4096
@@ -33,6 +34,8 @@ static uint8_t heartbeat_transfer_id = 0;
 static void subscribe_services(void);
 static void handle_motor_enable(CanardRxTransfer* transfer);
 static void handle_set_targe(CanardRxTransfer* transfer);
+static void handle_pid_parameter(CanardRxTransfer* transfer);
+
 typedef void (*canard_subscription_callback_t)(CanardRxTransfer*);
 
 
@@ -180,7 +183,18 @@ static void subscribe_services(void)
                      &sub_enable);
     sub_setTar.user_reference = handle_set_targe;
     canardRxSubscribe(&canard, CanardTransferKindRequest, 117, 16, CANARD_DEFAULT_TRANSFER_ID_TIMEOUT_USEC, &sub_setTar);
-                 
+
+
+    static CanardRxSubscription sub_pid_param;
+    canardRxSubscribe(&canard,
+                     CanardTransferKindRequest,
+                     custom_data_types_dinosaurs_PortId_1_0_dinosaurs_actuator_wheel_motor_PidParameter_1_0_FIXED_PORT_ID_,
+                     custom_data_types_dinosaurs_actuator_wheel_motor_PidParameter_Request_1_0_EXTENT_BYTES_,
+                     CANARD_DEFAULT_TRANSFER_ID_TIMEOUT_USEC,
+                     &sub_pid_param);
+    sub_pid_param.user_reference = (void*)handle_pid_parameter;
+    
+
 }
 #include <lib/bldcmotor/motor.h>
 // 电机使能处理函数
@@ -265,6 +279,43 @@ static void handle_set_targe(CanardRxTransfer* transfer)
             .transfer_id = transfer->metadata.transfer_id
         };
         canardTxPush(&txQueue, &canard, 0, &meta, buffer_size, buffer);    
+    }
+}
+static void handle_pid_parameter(CanardRxTransfer* transfer)
+{
+    custom_data_types_dinosaurs_actuator_wheel_motor_PidParameter_Request_1_0 req = {0};
+    size_t inout_size = transfer->payload_size;
+    
+    if (custom_data_types_dinosaurs_actuator_wheel_motor_PidParameter_Request_1_0_deserialize_(
+        &req, transfer->payload, &inout_size) >= 0) 
+    {
+        LOG_INF("Received PID params from node %d: [%.6f, %.6f, %.6f, %.6f]", 
+               transfer->metadata.remote_node_id,
+               (double)req.pid_params[0], (double)req.pid_params[1],
+               (double)req.pid_params[2], (double)req.pid_params[3]);
+        
+        // 这里添加实际PID参数处理逻辑
+        // 例如: pid_set_parameters(req.pid_params[0], req.pid_params[1], 
+        //       req.pid_params[2], req.pid_params[3]);
+        
+        // 准备响应
+        custom_data_types_dinosaurs_actuator_wheel_motor_PidParameter_Response_1_0 resp = {
+            .status = custom_data_types_dinosaurs_actuator_wheel_motor_PidParameter_Response_1_0_SET_SUCCESS
+        };
+        
+        uint8_t buffer[custom_data_types_dinosaurs_actuator_wheel_motor_PidParameter_Response_1_0_SERIALIZATION_BUFFER_SIZE_BYTES_];
+        size_t buffer_size = sizeof(buffer);
+        custom_data_types_dinosaurs_actuator_wheel_motor_PidParameter_Response_1_0_serialize_(
+            &resp, buffer, &buffer_size);
+        
+        const CanardTransferMetadata meta = {
+            .priority = CanardPriorityNominal,
+            .transfer_kind = CanardTransferKindResponse,
+            .port_id = transfer->metadata.port_id,
+            .remote_node_id = transfer->metadata.remote_node_id,
+            .transfer_id = transfer->metadata.transfer_id
+        };
+        canardTxPush(&txQueue, &canard, 0, &meta, buffer_size, buffer);
     }
 }
 

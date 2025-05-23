@@ -88,7 +88,21 @@
 		 LL_TIM_OC_SetCompareCH4(TIM1, (uint32_t)(cfg->timing_params[1]-30));
 	 }
  }
- 
+static void pwm_stm32_setstatus(const struct device* dev,int8_t flag)
+{
+	const struct pwm_stm32_config *cfg = dev->config;
+	if(flag)
+	{
+		LL_TIM_CC_EnableChannel(cfg->timer,
+			LL_TIM_CHANNEL_CH1 | LL_TIM_CHANNEL_CH2 | LL_TIM_CHANNEL_CH3 |
+			LL_TIM_CHANNEL_CH1N | LL_TIM_CHANNEL_CH2N | LL_TIM_CHANNEL_CH3N); 
+	}else{
+		LL_TIM_CC_DisableChannel(cfg->timer,
+			LL_TIM_CHANNEL_CH1 | LL_TIM_CHANNEL_CH2 | LL_TIM_CHANNEL_CH3 |
+			LL_TIM_CHANNEL_CH1N | LL_TIM_CHANNEL_CH2N | LL_TIM_CHANNEL_CH3N); 			 
+	}
+}
+
  /* External timer initialization functions */
  extern void MX_TIM1_Init(void);
  extern void MX_TIM8_Init(void);
@@ -209,6 +223,7 @@
 		 .start = pwm_stm32_start, \
 		 .stop = pwm_stm32_stop, \
 		 .set_phase_voltages = pwm_stm32_setduties, \
+		 .set_phase_state = pwm_stm32_setstatus\
 	 }; \
 	 DEVICE_DT_INST_DEFINE(n, \
 		 &pwm_stm32_init, \

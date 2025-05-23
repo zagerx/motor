@@ -12,7 +12,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
- #include <statemachine/statemachine.h>
+ #include "algorithmlib/pid.h"
+#include <statemachine/statemachine.h>
  #include <lib/bldcmotor/motor.h>
  #include <lib/foc/foc.h>//TODO
  #include <drivers/currsmp.h>
@@ -26,7 +27,8 @@
  /* Forward declaration */
  static void motor_start(const struct device *dev);
  static void motor_stop(const struct device *dev);
- static void motor_set_threephase(const struct device *dev);
+ static void motor_set_threephase_enable(const struct device *dev);
+ static void motor_set_threephase_disable(const struct device *dev);
  
  /**
   * @brief Open loop control mode state machine
@@ -46,13 +48,18 @@
        motor_start(obj->pdata);
        obj->chState = MOTOR_STATE_IDLE;
        break;
-       
+     case MOTOR_STATE_INIT:
+       motor_set_threephase_enable(obj->pdata);
+      //  pid_init();
+       break; 
      case MOTOR_STATE_IDLE:
        /* Main operational state - handled by FOC */
        break;
      case MOTOR_STATE_STOP:
-      motor_set_threephase(obj->pdata);
-      break;
+      //  pid_reset(pid_cb_t *pid);
+       motor_set_threephase_disable(obj->pdata);
+       break;
+
      case EXIT:
        LOG_INF("Exit loop mode");
        break;
@@ -163,7 +170,7 @@
    pwm_stop(devc);
  } 
 
- static void motor_set_threephase(const struct device *dev)
+ static void motor_set_threephase_disable(const struct device *dev)
  {
   if (!device_is_ready(dev)) {
     LOG_ERR("PWM motor1 device not ready");
@@ -173,5 +180,18 @@
    
   /* Stop PWM outputs */
   const struct device *devc = cfg->pwm;
-  pwm_set_phase_voltages(devc,0.0f,0.0f,0.0f);  
+  svpwm_set_phase_state(devc,0);  
+ }
+
+ static void motor_set_threephase_enable(const struct device *dev)
+ {
+  if (!device_is_ready(dev)) {
+    LOG_ERR("PWM motor1 device not ready");
+    return;
+  }
+  const struct motor_config *cfg = dev->config;
+   
+  /* Stop PWM outputs */
+  const struct device *devc = cfg->pwm;
+  svpwm_set_phase_state(devc,1);  
  }

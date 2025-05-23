@@ -10,7 +10,8 @@
  #ifndef _DRIVERS_PWM_H_
  #define _DRIVERS_PWM_H_
  
- #include <zephyr/device.h>
+ #include <stdint.h>
+#include <zephyr/device.h>
  #include <zephyr/types.h>
  
  /**
@@ -26,7 +27,7 @@
      void (*stop)(const struct device *dev);
      void (*set_phase_voltages)(const struct device *dev,
                     float ua, float ub, float uc);
-    //  void (*set_phase_state)(const struct device *dev)
+     void (*set_phase_state)(const struct device *dev,int8_t flag);
 };
  
  /** @endcond */
@@ -78,14 +79,20 @@
      api->set_phase_voltages(dev, ua, ub, uc);
  }
  
-//  static inline void svpwm_set_phase_state(const struct device *dev)
-//  {
-//      const struct svpwm_driver_api *api = dev->api;
+ static inline void svpwm_set_phase_state(const struct device *dev,int8_t flag)
+ {
+    
+     const struct pwm_driver_api *api = dev->api;
  
-//      if (api->set_phase_state) {
-//          api->set_phase_state(dev, a, b, c);
-//      }
-//  }
+     if (api->set_phase_state) {
+        if(flag)
+        {
+            api->set_phase_state(dev,1);
+        }else{
+            api->set_phase_state(dev,0);
+        }
+     }
+ }
  
  /** @} */
  
