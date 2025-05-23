@@ -199,11 +199,14 @@ static void handle_motor_enable(CanardRxTransfer* transfer)
         if(req.enable_state == 0) {
             LOG_INF("motor_start()");  // 需实现电机启动函数
             // motor_set_speedmode();
-            motor_set_mode(MOTOR_CMD_SET_SPEED_MODE);
+            // motor_set_mode(MOTOR_CMD_SET_SPEED_MODE);
+            motor_set_status(MOTOR_STATE_CLOSED_LOOP);
+
         } else {
             LOG_INF("motor_stop()");   // 需实现电机停止函数
             // motor_set_loopmode();
-            motor_set_mode(MOTOR_CMD_SET_LOOP_MODE);
+            // motor_set_mode(MOTOR_CMD_SET_LOOP_MODE);
+            motor_set_status( MOTOR_STATE_STOP);
         }
         // 发送响应
         custom_data_types_dinosaurs_actuator_wheel_motor_Enable_Response_1_0 resp = {
@@ -224,7 +227,7 @@ static void handle_motor_enable(CanardRxTransfer* transfer)
         canardTxPush(&txQueue, &canard, 0, &meta, buffer_size, buffer);
     }
 }
-
+extern float test_targe;
 static void handle_set_targe(CanardRxTransfer* transfer)
 {
     const uint8_t* data; size_t len; CanardNodeID sender_id;CanardPortID port_id;
@@ -238,6 +241,10 @@ static void handle_set_targe(CanardRxTransfer* transfer)
         LOG_INF("Node %u set targe: %f  %f", sender_id, (double)req.velocity.elements[0].meter_per_second,\
         (double)req.velocity.elements[1].meter_per_second);
 
+        /*
+            
+        */
+        test_targe = req.velocity.elements[0].meter_per_second;
         // 创建响应
         custom_data_types_dinosaurs_actuator_wheel_motor_SetTargetValue_Response_2_0 response = {
             .status = custom_data_types_dinosaurs_actuator_wheel_motor_SetTargetValue_Response_2_0_SET_SUCCESS

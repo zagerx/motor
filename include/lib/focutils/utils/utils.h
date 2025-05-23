@@ -7,7 +7,7 @@
     #define park_f32      arm_park_f32
     #define inv_park_f32  arm_inv_park_f32
     #define sin_cos_f32   arm_sin_cos_f32
-    // #define cos_f32   arm_cos_f32
+    #define sqrt_f32      arm_sqrt_f32
 #endif
 
 #define _2_PI_     6.28318530717958647692f  // 2π

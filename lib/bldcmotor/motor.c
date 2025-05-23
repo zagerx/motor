@@ -84,7 +84,42 @@ void motor_set_mode(int16_t mode)
       }
     }
 }
-
+void motor_set_status(int16_t status)
+{
+    /* Get motor devices from device tree */
+    const struct device *motors[] = {
+        #if DT_NODE_HAS_STATUS(DT_NODELABEL(motor0), okay)
+                DEVICE_DT_GET(DT_NODELABEL(motor0)),
+        #endif
+        #if DT_NODE_HAS_STATUS(DT_NODELABEL(motor1), okay)
+                DEVICE_DT_GET(DT_NODELABEL(motor1))
+        #endif
+        };
+    
+        const struct device *motor;
+        struct motor_data *data;
+    
+        /* Process each motor */
+        for(uint8_t i = 0;i < ARRAY_SIZE(motors);i++)
+        {
+          if (!device_is_ready(motors[i])) 
+          {
+            LOG_ERR("Motor %d not ready", i);
+            continue;
+          }
+          
+          motor = motors[i];
+          data = motor->data;
+    
+          /* Set requested mode */
+          if(status == MOTOR_STATE_STOP)
+          {
+            data->statue = MOTOR_STATE_STOP;
+          }else if(status == MOTOR_STATE_CLOSED_LOOP){
+            data->statue = MOTOR_STATE_CLOSED_LOOP;
+          }
+        }    
+}
 /**
  * @brief FOC current regulator callback
  * @param ctx Device context pointer
@@ -94,6 +129,7 @@ void motor_set_mode(int16_t mode)
  * 2. Performs Park/Inverse Park transforms
  * 3. Generates PWM outputs via SVM
  */
+ float test_targe = 0.0f;
 static void foc_curr_regulator(void *ctx)
 {    
     struct device *dev = (struct device*)ctx;
@@ -123,8 +159,21 @@ static void foc_curr_regulator(void *ctx)
     float d_out,q_out;
     d_out = pid_contrl((pid_cb_t *)(&data->id_pid), 0.0f, data->i_d);
     // d_out = 0.0f;
-    // q_out = pid_contrl((pid_cb_t *)(&data->iq_pid), -0.8f, data->i_q);
-    q_out = -0.02f;
+    q_out = pid_contrl((pid_cb_t *)(&data->iq_pid), test_targe, data->i_q);
+    // q_out = -0.02f;
+
+    /*
+
+     */
+     const float Vmax = 12.0f; // 根据系统参数设置
+     float mag_sq = d_out*d_out + q_out*q_out;
+     if (mag_sq > Vmax*Vmax) {
+        float temp ;
+        sqrt_f32(mag_sq,&temp);
+         float scale = Vmax / temp;
+         d_out *= scale;
+         q_out *= scale;
+     }
 
     /* Perform inverse Park transform */
     sin_cos_f32((data->eangle * 57.2957795131f), &sin_the, &cos_the);
@@ -160,8 +209,8 @@ static int motor_init(const struct device *dev)
     const struct device *foc = cfg->foc_dev;
     struct foc_data *data = foc->data;
     
-    pid_init(&(data->id_pid),0.002f,0.0001f,1.0f,12.0f,-12.0f);
-    pid_init(&(data->iq_pid),0.002f,0.0001f,1.0f,12.0f,-12.0f);
+    pid_init(&(data->id_pid),0.006f,0.0001f,1.0f,12.0f,-12.0f);
+    pid_init(&(data->iq_pid),0.006f,0.0001f,1.0f,12.0f,-12.0f);
     /* Initialize state machine */
     statemachine_init(cfg->fsm, dev->name, motor_open_loop_mode, (void *)dev) ;
     return 0;

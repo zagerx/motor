@@ -115,12 +115,12 @@
     data->adc_average = moving_avg_update(data->average_filter, (data->adc_channl_a+data->adc_channl_b+data->adc_channl_c)/3);
     // 2. 改进转换公式
     const float scale = 0.06012f;
-    curr->i_a = ((int16_t)(data->adc_channl_a - data->adc_average)) * scale;
-    curr->i_b = ((int16_t)(data->adc_channl_b - data->adc_average)) * scale;
-    curr->i_c = ((int16_t)(data->adc_channl_c - data->adc_average)) * scale;
-    // curr->i_a = ((int16_t)(data->adc_channl_a - 2048)) * scale;
-    // curr->i_b = ((int16_t)(data->adc_channl_b - 2048)) * scale;
-    // curr->i_c = ((int16_t)(data->adc_channl_c - 2048)) * scale;
+    // curr->i_a = ((int16_t)(data->adc_channl_a - data->adc_average)) * scale;
+    // curr->i_b = ((int16_t)(data->adc_channl_b - data->adc_average)) * scale;
+    // curr->i_c = ((int16_t)(data->adc_channl_c - data->adc_average)) * scale;
+    curr->i_a = ((int16_t)(data->adc_channl_a - 2048)) * scale;
+    curr->i_b = ((int16_t)(data->adc_channl_b - 2048)) * scale;
+    curr->i_c = ((int16_t)(data->adc_channl_c - 2048)) * scale;
  }
  
  /** @brief STM32 Shunt Current Sampling Driver API. */

@@ -25,6 +25,8 @@
  
  /* Forward declaration */
  static void motor_start(const struct device *dev);
+ static void motor_stop(const struct device *dev);
+ static void motor_set_threephase(const struct device *dev);
  
  /**
   * @brief Open loop control mode state machine
@@ -48,7 +50,9 @@
      case MOTOR_STATE_IDLE:
        /* Main operational state - handled by FOC */
        break;
-       
+     case MOTOR_STATE_STOP:
+      motor_set_threephase(obj->pdata);
+      break;
      case EXIT:
        LOG_INF("Exit loop mode");
        break;
@@ -139,4 +143,35 @@
    /* Start PWM outputs */
    const struct device *devc = cfg->pwm;
    pwm_start(devc);
+ }
+
+ static void motor_stop(const struct device *dev)
+ {
+   if (!device_is_ready(dev)) {
+     LOG_ERR("PWM motor1 device not ready");
+     return;
+   }
+   
+   const struct motor_config *cfg = dev->config;
+   
+   /* Start feedback device */
+  //  const struct device *dev_f = cfg->feedback;
+  //  feedback_start(dev_f);
+   
+   /* Stop PWM outputs */
+   const struct device *devc = cfg->pwm;
+   pwm_stop(devc);
+ } 
+
+ static void motor_set_threephase(const struct device *dev)
+ {
+  if (!device_is_ready(dev)) {
+    LOG_ERR("PWM motor1 device not ready");
+    return;
+  }
+  const struct motor_config *cfg = dev->config;
+   
+  /* Stop PWM outputs */
+  const struct device *devc = cfg->pwm;
+  pwm_set_phase_voltages(devc,0.0f,0.0f,0.0f);  
  }

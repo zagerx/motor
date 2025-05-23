@@ -42,6 +42,7 @@
 	 
 	 if (!slave_flag) {
 		 /* Master timer stop logic */
+		 LL_TIM_DisableCounter(cfg->timer);
 	 } else {
 		 /* Slave timer stop logic */
 	 }

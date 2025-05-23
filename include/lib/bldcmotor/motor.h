@@ -52,5 +52,6 @@ enum motor_state{
 
     
     extern void motor_set_mode(int16_t mode);
+    extern void motor_set_status(int16_t status);
 
 #endif
