@@ -20,8 +20,39 @@
  
  /* FOC configuration structure */
 
- 
 
+static void _write(const struct device* dev,int16_t flag,float *input)
+{
+    struct foc_data *data = dev->data;
+    switch (flag) {
+        case FOC_PARAM_D_PID:
+            {
+                float kp,ki,kc,max,min;
+                kp = input[0];ki = input[1];kc = input[2];max = input[3];min = input[4];
+                pid_init(&data->id_pid,kp,ki,kc,max,min);
+            }
+        break;
+        case FOC_PARAM_Q_PID:
+            {
+                float kp,ki,kc,max,min;
+                kp = input[0];ki = input[1];kc = input[2];max = input[3];min = input[4];
+                pid_init(&data->iq_pid,kp,ki,kc,max,min);
+            }
+        break;
+        case FOC_PARAM_DQ_REAL:
+            {
+                data->i_d = input[0];
+                data->i_q = input[1];
+            }
+        break;
+        case FOC_PARAM_ME_ANGLE_REAL:
+            {
+                data->angle = input[0];
+                data->eangle = input[1];
+            }
+        break;
+    } 
+}
  /*
   * Position control loop (stub)
   * Returns: 0 on success
@@ -72,6 +103,7 @@
          .posloop = foc_posloop, \
          .currloop = foc_currentloop, \
          .opencloop = foc_openloop, \
+         .write_data = _write,\
      }; \
      static svm_t svm_##n; \
      static struct foc_data foc_data_##n = { \

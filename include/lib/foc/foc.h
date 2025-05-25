@@ -9,8 +9,19 @@
 #include <lib/focutils/svm/svm.h>
 #include <algorithmlib/pid.h>
 #include <sys/types.h>
+enum FOC_DATA_INDEX{
+    FOC_PARAM_D_PID = 0,
+    FOC_PARAM_Q_PID,
+    FOC_PARAM_DQ_REF,
+    FOC_PARAM_SPEED_REF,
 
- /* FOC runtime data */
+
+    FOC_PARAM_DQ_REAL,
+    FOC_PARAM_SPEED_REAL,
+    FOC_PARAM_ME_ANGLE_REAL,
+    FOC_PARAM_AB_REAL,
+};
+/* FOC runtime data */
  struct foc_data {
     svm_t *svm_handle;              /* Space Vector Modulation handle */
 
@@ -38,7 +49,9 @@ struct foc_api{
     int (*currloop)(const struct device*);
     int (*opencloop)(const struct device*);
     void (*curr_regulator)(void *ctx);
+    void (*write_data)(const struct device*,int16_t,float*);
 };
+ 
 
 static inline void foc_modulate(const struct device* dev,float alpha,float beta)
 {
@@ -46,5 +59,11 @@ static inline void foc_modulate(const struct device* dev,float alpha,float beta)
    const struct foc_data* data = dev->data; 
    cfg->modulate(data->svm_handle,alpha,beta);
 } 
+
+static inline void foc_write_data(const struct device* dev,int16_t flag,float* input)
+{
+   const struct foc_api *api = dev->api; 
+   api->write_data(dev,flag,input);
+}
 #endif
 
