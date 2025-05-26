@@ -51,28 +51,28 @@
     motors {
         motor0: motor_0 {
 			compatible = "motor-bldc";
-			control-algorithm = <&foc1>;
-			feedback = <&abz_hall2>;  // 添加feedback属性
-			currsmp = <&currsmp1>;
+			control-algorithm = <&foc0>;
+			feedback = <&abz_hall0>;  // 添加feedback属性
+			currsmp = <&currsmp0>;
 			pwm = <&pwm1>;
 			status = "okay";
         };
         motor1: motor_1 {
 			compatible = "motor-bldc";
-			control-algorithm = <&foc2>;
+			control-algorithm = <&foc1>;
 			feedback = <&abz_hall1>;  // 添加feedback属      
-			currsmp = <&currsmp2>;
+			currsmp = <&currsmp1>;
 			pwm = <&pwm8>;			
-		    status = "okay";
+		    status = "disabled";
         };
     };
 	control_algorithm {
-		foc1:ctrl_algo1{
+		foc0:ctrl_algo0{
 			compatible = "foc-ctrl-algo";
 			modulate = <1>;
 			status = "okay";
 		};
-		foc2:ctrl_algo2{
+		foc1:ctrl_algo1{
 			compatible = "foc-ctrl-algo";
 			modulate = <0>;
 			status = "okay";
@@ -164,7 +164,7 @@
 
 
 &timers4 {
-	abz_hall2: abz_hall {
+	abz_hall0: abz_hall {
 		compatible = "st,stm32-abz-hall";
 		pinctrl-0 = <&tim4_ch1_pb6 &tim4_ch2_pb7>;
 		pinctrl-names = "default";		
@@ -195,7 +195,7 @@
 };
 
 &adc1 {
-	currsmp1: currsmp {
+	currsmp0: currsmp {
 		compatible = "st,stm32-currsmp-shunt";
 		pinctrl-0 = <&adc1_inp16_pa0  &adc1_inp17_pa1 &adc1_inp14_pa2>;
 		pinctrl-names = "default";
@@ -206,7 +206,7 @@
 };
 
 &adc2 {
-	currsmp2: currsmp {
+	currsmp1: currsmp {
 		compatible = "st,stm32-currsmp-shunt";
 		pinctrl-0 = <&adc2_inp8_pc5  &adc2_inp9_pb0 &adc2_inp5_pb1>;
 		pinctrl-names = "default";

@@ -43,45 +43,65 @@
   */
  fsm_rt_t motor_open_loop_mode(fsm_cb_t *obj)
  {
-  const struct device* motor = obj->pdata;
+  const struct device* motor = obj->p1;
+
+  struct motor_data *m_data = motor->data;  
   const struct device* foc = ((const struct motor_config*)motor->config)->foc_dev;
   struct foc_data* data = foc->data;
-  // const struct device *devc = ((const struct motor_config*)motor->config)->currsmp;
+
+  statemachine_updatestatus(obj,obj->sig); 
+
    switch (obj->chState) {
      case ENTER:
        LOG_INF("Enter %s loop mode",obj->name);
-       motor_start(obj->pdata);
+       motor_start(motor);
        obj->chState = MOTOR_STATE_IDLE;
        break;
      case MOTOR_STATE_INIT:
+      m_data->statue = MOTOR_STATE_INIT;
        LOG_INF("motor status: MOTOR_STATE_INIT");
-       motor_set_threephase_enable(obj->pdata);
+       motor_set_threephase_enable(motor);
        data->iq_ref = 0.0f;
-       obj->chState = MOTOR_STATE_IDLE;
+       obj->chState = MOTOR_STATE_CLOSED_LOOP;
+
+       break;
+     case MOTOR_STATE_CLOSED_LOOP://Runing
+       m_data->statue = MOTOR_STATE_CLOSED_LOOP;
        break; 
      case MOTOR_STATE_PARAM_UPDATE:
+       m_data->statue = MOTOR_STATE_PARAM_UPDATE;
        LOG_INF("motor status: MOTOR_STATE_PARAM_UPDATE");
-       motor_set_threephase_disable(obj->pdata);
+       motor_set_threephase_disable(motor);
+
+       float kp,ki;
+       float *param = (float *)obj->p2;
+       kp = param[0];ki = param[1];
+       pid_init(&(data->iq_pid), kp, ki, 1.0f,12.0f,-12.0f);
+       LOG_INF("pid param %f,%f",(double)kp,(double)ki);
+       param[0] = 0.0f;param[1] = 0.0f;
        obj->chState = MOTOR_STATE_IDLE;
        break;
-     case MOTOR_STATE_IDLE:
+    case MOTOR_STATE_IDLE:
+       m_data->statue = MOTOR_STATE_IDLE;
        /* Main operational state - handled by FOC */
        break;
      case MOTOR_STATE_STOP:
-      LOG_INF("motor status: MOTOR_STATE_STOP");
-      data->iq_ref = 0.0f; 
-      motor_set_threephase_disable(obj->pdata);
+       m_data->statue = MOTOR_STATE_STOP;
+       LOG_INF("motor status: MOTOR_STATE_STOP");
+       data->iq_ref = 0.0f; 
+       motor_set_threephase_disable(motor);
        obj->chState = MOTOR_STATE_IDLE;
        break;
 
      case EXIT:
        LOG_INF("Exit loop mode");
-       motor_stop(obj->pdata);
+       motor_stop(motor);
        break;
        
      default:
        break;    
    }
+   obj->sig = NULL_USE_SING;
    return fsm_rt_cpl;
  }
  

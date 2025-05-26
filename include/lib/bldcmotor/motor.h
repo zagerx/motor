@@ -16,7 +16,7 @@ struct motor_config {
 * @brief FOC电机控制状态枚举
 */
 enum motor_state{
-    MOTOR_STATE_IDLE = USER,        // 空闲状态，未使能
+    MOTOR_STATE_IDLE = USER_STATUS,        // 空闲状态，未使能
     MOTOR_STATE_PARAM_UPDATE,
     MOTOR_STATE_INIT,        // 初始化状态
     MOTOR_STATE_ALIGN,       // 电机对齐状态(初始位置校准)
@@ -37,13 +37,13 @@ enum motor_state{
     };
     
     enum motor_cmd{
-      MOTOR_CMD_UNSED,
-      MOTOR_CMD_SET_SPEED_MODE,// 进入速度模式
+      MOTOR_CMD_SET_SPEED_MODE = USER_SIG,// 进入速度模式
       MOTOR_CMD_SET_LOOP_MODE,
       MOTOR_CMD_SET_TORQUE_MODE,
       MOTOR_CMD_SET_ENABLE,
       MOTOR_CMD_SET_DISABLE,
       MOTOR_CMD_SET_SPEED,//设置速度
+      MOTOR_CMD_SET_PIDPARAM,
     };
     struct motor_data {
       enum motor_mode mode;
@@ -53,9 +53,8 @@ enum motor_state{
 
     
     extern void motor_set_mode(int16_t mode);
-    extern void motor_set_status(int16_t status);
     extern void motor_set_ref_param(int8_t flag, float current_ref,float speed_ref);
-    extern void motor_set_pid_param(float kp,float ki,float kc,float kd);
+    void motor_cmd_set(int16_t cmd,void *pdata,int8_t datalen);
 
 
 #endif

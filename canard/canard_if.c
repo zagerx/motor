@@ -11,6 +11,7 @@ uavcan协议的接口文件
 
 #include "canard.h"
 #include "zephyr/posix/sys/stat.h"
+#include "zephyr/sys/util.h"
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/drivers/can.h>
@@ -106,7 +107,7 @@ void canard_publish_heartbeat(void)
 
 static void canard_thread(void *p1, void *p2, void *p3)
 {
-    LOG_INF("canard_thread start");
+    // LOG_INF("canard_thread start");
     can_init();
     canard_if_init(28);
     subscribe_services();  // 新增服务订阅
@@ -211,16 +212,9 @@ static void handle_motor_enable(CanardRxTransfer* transfer)
         
         // 执行电机控制
         if(req.enable_state == 0) {
-            // LOG_INF("motor_start()");  // 需实现电机启动函数
-            // motor_set_speedmode();
-            // motor_set_mode(MOTOR_CMD_SET_SPEED_MODE);
-            motor_set_status(MOTOR_STATE_INIT);
-
+            motor_cmd_set(MOTOR_CMD_SET_ENABLE,0,0);
         } else {
-            // LOG_INF("motor_stop()");   // 需实现电机停止函数
-            // motor_set_loopmode();
-            // motor_set_mode(MOTOR_CMD_SET_LOOP_MODE);
-            motor_set_status( MOTOR_STATE_STOP);
+            motor_cmd_set(MOTOR_CMD_SET_DISABLE,0,0);
         }
         // 发送响应
         custom_data_types_dinosaurs_actuator_wheel_motor_Enable_Response_1_0 resp = {
@@ -251,8 +245,8 @@ static void handle_set_targe(CanardRxTransfer* transfer)
     custom_data_types_dinosaurs_actuator_wheel_motor_SetTargetValue_Request_2_0 req;
     size_t inout_size = len;
     if (custom_data_types_dinosaurs_actuator_wheel_motor_SetTargetValue_Request_2_0_deserialize_(&req, data, &inout_size) >= 0) {
-        LOG_INF("Node %u set targe: %f  %f", sender_id, (double)req.velocity.elements[0].meter_per_second,\
-        (double)req.velocity.elements[1].meter_per_second);
+        // LOG_INF("Node %u set targe: %f  %f", sender_id, (double)req.velocity.elements[0].meter_per_second,
+        // (double)req.velocity.elements[1].meter_per_second);
 
         /*
             
@@ -296,7 +290,12 @@ static void handle_pid_parameter(CanardRxTransfer* transfer)
         // 这里添加实际PID参数处理逻辑
         // 例如: pid_set_parameters(req.pid_params[0], req.pid_params[1], 
         //       req.pid_params[2], req.pid_params[3]);
-        motor_set_pid_param(req.pid_params[0],req.pid_params[1],req.pid_params[2],req.pid_params[3]); 
+
+        float buf[4];
+        buf[0] = req.pid_params[0];
+        buf[1] = req.pid_params[1];
+
+        motor_cmd_set(MOTOR_CMD_SET_PIDPARAM,buf,ARRAY_SIZE(buf));
         // 准备响应
         custom_data_types_dinosaurs_actuator_wheel_motor_PidParameter_Response_1_0 resp = {
             .status = custom_data_types_dinosaurs_actuator_wheel_motor_PidParameter_Response_1_0_SET_SUCCESS

@@ -61,6 +61,7 @@
 		 LL_TIM_EnableAllOutputs(cfg->timer);
 		 LL_TIM_EnableCounter(cfg->timer);
 		 LL_TIM_CC_EnableChannel(cfg->timer, LL_TIM_CHANNEL_CH4);
+		 LL_TIM_OC_SetCompareCH4(TIM1, (uint32_t)(cfg->timing_params[1]-30));//TODO
 	 } else {
 		 LOG_INF("Slave timer");
 		 LL_TIM_OC_SetCompareCH4(TIM1, (uint32_t)(cfg->timing_params[1]-30));
@@ -94,9 +95,9 @@
 static void pwm_stm32_setstatus(const struct device* dev,int8_t flag)
 {
 	const struct pwm_stm32_config *cfg = dev->config;
-	// LL_TIM_OC_SetCompareCH1(cfg->timer, 0);
-	// LL_TIM_OC_SetCompareCH2(cfg->timer, 0);
-	// LL_TIM_OC_SetCompareCH3(cfg->timer, 0);	
+	LL_TIM_OC_SetCompareCH1(cfg->timer, 0);
+	LL_TIM_OC_SetCompareCH2(cfg->timer, 0);
+	LL_TIM_OC_SetCompareCH3(cfg->timer, 0);	
 	if(flag)
 	{
 		LL_TIM_CC_EnableChannel(cfg->timer,

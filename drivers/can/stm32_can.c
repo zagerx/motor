@@ -38,7 +38,7 @@ int can_init(void)
         k_msleep(1);
     }
 
-    LOG_INF("can init finish");
+    // LOG_INF("can init finish");
 
     struct can_filter filter = {
         .id = 0x00000000,  // 匹配所有标准ID
@@ -51,7 +51,7 @@ int can_init(void)
     // 打印硬件状态
     uint32_t core_clock;
     can_get_core_clock(can_dev, &core_clock);
-    LOG_INF("CAN core clock: %u Hz", core_clock);
+    // LOG_INF("CAN core clock: %u Hz", core_clock);
 
     can_start(can_dev); 
     return 0;
