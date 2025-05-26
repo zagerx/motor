@@ -73,6 +73,8 @@ static float _normalize_angle(float angle)
     uint8_t err_count;
     float base_angle[6];
     float realcacle_angle;
+    float pre_angle;
+    float speed;
     sect_t positive_sect[7];
     sect_t negative_sect[7];    
  };
@@ -186,20 +188,23 @@ static float _normalize_angle(float angle)
      float diff = (delt_cnt)*ABZ_ENCODER_RESOLUTION;
 
      hall->realcacle_angle += diff;     
+     hall->speed = (hall->realcacle_angle - hall->pre_angle)/95493.0f;
+     hall->pre_angle = hall->realcacle_angle;
      return hall->realcacle_angle;
  }
  
  static float abz_stm32_get_mangle(const struct device *dev)
  {
      /* TODO: Implement mechanical angle calculation */
-
      return 0.0f;
  }
  
  static float abz_stm32_get_rads(const struct device *dev)
  {
      /* TODO: Implement speed calculation */
-     return 0.0f;
+    const struct abz_hall_stm32_data *data = dev->data;
+    struct hall_data_t* hall = (struct hall_data_t*)(&data->hall);     
+    return hall->speed;
  }
  
  static float abz_stm32_get_position(const struct device *dev)

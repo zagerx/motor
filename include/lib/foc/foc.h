@@ -28,6 +28,7 @@ enum FOC_DATA_INDEX{
     float self_theta;               /* Internal theta for open loop */
     pid_cb_t id_pid;
     pid_cb_t iq_pid;
+    pid_cb_t speed_pid;
     float id_ref,iq_ref;
     float speed_ref;
     /* Read only variables */
