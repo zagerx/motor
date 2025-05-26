@@ -251,7 +251,12 @@ static void handle_set_targe(CanardRxTransfer* transfer)
         /*
             
         */
-        motor_set_ref_param(0,req.velocity.elements[0].meter_per_second,0.0f);
+        // motor_set_ref_param(0,req.velocity.elements[0].meter_per_second,0.0f);
+
+        float buf[2];
+        buf[0] = req.velocity.elements[0].meter_per_second;
+        buf[1] = req.velocity.elements[1].meter_per_second;
+        motor_cmd_set(MOTOR_CMD_SET_SPEED,buf,ARRAY_SIZE(buf));
         // 创建响应
         custom_data_types_dinosaurs_actuator_wheel_motor_SetTargetValue_Response_2_0 response = {
             .status = custom_data_types_dinosaurs_actuator_wheel_motor_SetTargetValue_Response_2_0_SET_SUCCESS

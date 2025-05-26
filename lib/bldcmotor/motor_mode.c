@@ -76,7 +76,8 @@
        float kp,ki;
        float *param = (float *)obj->p2;
        kp = param[0];ki = param[1];
-       pid_init(&(data->iq_pid), kp, ki, 1.0f,12.0f,-12.0f);
+       pid_init(&(data->id_pid), kp, ki, 0.50f,12.0f,-12.0f);
+       pid_init(&(data->iq_pid), kp, ki, 0.50f,12.0f,-12.0f);
        LOG_INF("pid param %f,%f",(double)kp,(double)ki);
        param[0] = 0.0f;param[1] = 0.0f;
        obj->chState = MOTOR_STATE_IDLE;
@@ -89,6 +90,7 @@
        m_data->statue = MOTOR_STATE_STOP;
        LOG_INF("motor status: MOTOR_STATE_STOP");
        data->iq_ref = 0.0f; 
+       pid_reset(&(data->iq_pid));
        motor_set_threephase_disable(motor);
        obj->chState = MOTOR_STATE_IDLE;
        break;

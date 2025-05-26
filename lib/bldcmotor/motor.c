@@ -141,8 +141,10 @@ void motor_cmd_set(int16_t cmd,void *pdata,int8_t datalen)
   
       const struct device *motor;
       struct motor_data *data;
-      fsm_cb_t *fsm;
+       fsm_cb_t *fsm;
       const struct motor_config *cfg;
+      const struct device *foc_dev;
+
       /* Process each motor */
       for(uint8_t i = 0;i < ARRAY_SIZE(motors);i++)
       {
@@ -156,7 +158,7 @@ void motor_cmd_set(int16_t cmd,void *pdata,int8_t datalen)
         data = motor->data;
         cfg = motor->config;
         fsm = cfg->fsm;
-
+        foc_dev = cfg->foc_dev;
         switch (cmd) {
           case  MOTOR_CMD_SET_SPEED_MODE:
             break;
@@ -167,6 +169,13 @@ void motor_cmd_set(int16_t cmd,void *pdata,int8_t datalen)
             statemachine_setsig(fsm,MOTOR_CMD_SET_DISABLE);
             break;
           case MOTOR_CMD_SET_SPEED:
+            {
+              if(data->statue != MOTOR_STATE_CLOSED_LOOP)
+              {
+                break;
+              }
+              foc_write_data(foc_dev,FOC_PARAM_DQ_REF,(float *)pdata);
+            }
             break;
           case MOTOR_CMD_SET_PIDPARAM:
             if(data->statue != MOTOR_STATE_IDLE)
@@ -179,7 +188,7 @@ void motor_cmd_set(int16_t cmd,void *pdata,int8_t datalen)
             statemachine_setsig(fsm,MOTOR_CMD_SET_PIDPARAM);
             fsm->p2 = (void *)buf;
             fsm->p2_len = datalen;
-            break;            
+            break;
           default:
             break;
           }
@@ -205,6 +214,8 @@ static void foc_curr_regulator(void *ctx)
     const struct device *foc = cfg->foc_dev;
     struct foc_data *data = foc->data;
     struct currsmp_curr current_now;
+
+    struct motor_data *m_data = dev->data;
     /* Get current measurements */
     LL_GPIO_SetOutputPin(GPIOE, GPIO_PIN_1);
     currsmp_get_currents(currsmp, &current_now);
@@ -221,12 +232,18 @@ static void foc_curr_regulator(void *ctx)
     if (data->self_theta > 6.28f) {
         data->self_theta = 0.0f;
     }
-    float d_out,q_out;
-    d_out = pid_contrl((pid_cb_t *)(&data->id_pid), 0.0f, data->i_d);
-    d_out = 0.0f;
-    q_out = pid_contrl((pid_cb_t *)(&data->iq_pid), data->iq_ref, data->i_q);
-    q_out = -0.02f;
 
+    float d_out,q_out;
+    if(m_data->statue == MOTOR_STATE_CLOSED_LOOP)
+    {
+      d_out = pid_contrl((pid_cb_t *)(&data->id_pid), 0.0f, data->i_d);
+      // d_out = 0.0f;
+      q_out = pid_contrl((pid_cb_t *)(&data->iq_pid), data->iq_ref, data->i_q);
+      // q_out = -0.02f;
+    }else{
+      d_out = 0.0f;
+      q_out = 0.0f;
+    }
     /*
 
      */
@@ -274,8 +291,8 @@ static int motor_init(const struct device *dev)
     const struct device *foc = cfg->foc_dev;
     struct foc_data *data = foc->data;
     
-    pid_init(&(data->id_pid),0.006f,0.0001f,1.0f,12.0f,-12.0f);
-    pid_init(&(data->iq_pid),0.006f,0.0001f,1.0f,12.0f,-12.0f);
+    pid_init(&(data->id_pid),0.016f,0.008f,0.5f,12.0f,-12.0f);
+    pid_init(&(data->iq_pid),0.016f,0.008f,0.5f,12.0f,-12.0f);
     /* Initialize state machine */
     statemachine_init(cfg->fsm, dev->name, motor_open_loop_mode, (void *)dev,motor_sig_arr,ARRAY_SIZE(motor_sig_arr));
     return 0;

@@ -39,6 +39,14 @@ static void _write(const struct device* dev,int16_t flag,float *input)
                 pid_init(&data->iq_pid,kp,ki,kc,max,min);
             }
         break;
+        case FOC_PARAM_DQ_REF:
+            {
+                float id_ref,iq_ref;
+                id_ref = input[0];iq_ref = input[1];
+                data->id_ref = id_ref;
+                data->iq_ref = iq_ref;
+            }
+        break;
         case FOC_PARAM_DQ_REAL:
             {
                 data->i_d = input[0];
