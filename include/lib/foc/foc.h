@@ -9,6 +9,7 @@
 #include <lib/focutils/svm/svm.h>
 #include <algorithmlib/pid.h>
 #include <sys/types.h>
+#include <algorithmlib/filter.h>
 enum FOC_DATA_INDEX{
     FOC_PARAM_D_PID = 0,
     FOC_PARAM_Q_PID,
@@ -31,6 +32,8 @@ enum FOC_DATA_INDEX{
     pid_cb_t speed_pid;
     float id_ref,iq_ref;
     float speed_ref;
+    float speed_real;
+    lowfilter_t speed_filter;
     /* Read only variables */
     float i_d, i_q;                 /* D/Q axis currents */
     float rads;                     /* Rotor speed (rad/s) */
@@ -66,5 +69,8 @@ static inline void foc_write_data(const struct device* dev,int16_t flag,float* i
    const struct foc_api *api = dev->api; 
    api->write_data(dev,flag,input);
 }
+
+extern  float foc_speedexcu(const struct device* dev,float cur_speed);
+
 #endif
 

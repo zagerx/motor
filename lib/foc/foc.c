@@ -8,7 +8,8 @@
  * - Open loop control
  */
 
- #include "algorithmlib/pid.h"
+ #include "algorithmlib/filter.h"
+#include "algorithmlib/pid.h"
 #include "zephyr/device.h"
  
  #include <zephyr/logging/log.h>
@@ -47,6 +48,13 @@ static void _write(const struct device* dev,int16_t flag,float *input)
                 data->iq_ref = iq_ref;
             }
         break;
+        case FOC_PARAM_SPEED_REF:
+            {
+                float speed_ref;
+                speed_ref = input[0];
+                data->speed_ref = speed_ref;
+            }
+            break;
         case FOC_PARAM_DQ_REAL:
             {
                 data->i_d = input[0];
@@ -80,6 +88,7 @@ static void _write(const struct device* dev,int16_t flag,float *input)
  }
  
  /*
+
   * Open loop control (stub)
   * Returns: 0 on success
   */
@@ -88,7 +97,14 @@ static void _write(const struct device* dev,int16_t flag,float *input)
      return 0;
  }
  
- 
+ float foc_speedexcu(const struct device* dev,float cur_speed)
+ {
+    struct foc_data *data = dev->data;
+    float speed;
+    speed = lowfilter_cale((lowfilter_t *)&data->speed_filter, cur_speed);
+    data->speed_real = speed;
+    return speed;
+}
 
  /*
   * Initialize FOC device
@@ -99,6 +115,7 @@ static void _write(const struct device* dev,int16_t flag,float *input)
     const struct foc_data *data = dev->data;
     pid_init((pid_cb_t*)&(data->id_pid), 0.0f, 0.0f, 0.0f,0.0f,0.0f);
     pid_init((pid_cb_t*)&(data->iq_pid), 0.0f, 0.0f, 0.0f,0.0f,0.0f);
+    lowfilter_init((lowfilter_t *)&(data->speed_filter), 10.0f);
     return 0;
  }
 

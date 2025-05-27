@@ -46,6 +46,7 @@ static struct state_transition_map motor_sig_arr[] = {
   {.signal = MOTOR_CMD_SET_ENABLE,.target_state = MOTOR_STATE_INIT},
   {.signal = MOTOR_CMD_SET_DISABLE,.target_state = MOTOR_STATE_STOP},
   {.signal = MOTOR_CMD_SET_PIDPARAM,.target_state = MOTOR_STATE_PARAM_UPDATE},
+  {.signal = MOTOR_CMD_SET_SPEED,.target_state = MOTOR_STATE_CLOSED_LOOP},
 };
 /**
  * @brief Set motor operating mode
@@ -54,79 +55,6 @@ static struct state_transition_map motor_sig_arr[] = {
  * Iterates through all configured motors and sets their command mode.
  * Skips motors that aren't ready.
  */
-void motor_set_mode(int16_t mode)
-{
-    /* Get motor devices from device tree */
-    const struct device *motors[] = {
-    #if DT_NODE_HAS_STATUS(DT_NODELABEL(motor0), okay)
-            DEVICE_DT_GET(DT_NODELABEL(motor0)),
-    #endif
-    #if DT_NODE_HAS_STATUS(DT_NODELABEL(motor1), okay)
-            DEVICE_DT_GET(DT_NODELABEL(motor1))
-    #endif
-    };
-
-    const struct device *motor;
-    struct motor_data *data;
-
-    /* Process each motor */
-    for(uint8_t i = 0;i < ARRAY_SIZE(motors);i++)
-    {
-      if (!device_is_ready(motors[i])) 
-      {
-        LOG_ERR("Motor %d not ready", i);
-        continue;
-      }
-      
-      motor = motors[i];
-      data = motor->data;
-
-      /* Set requested mode */
-      if(mode == MOTOR_CMD_SET_SPEED_MODE)
-      {
-        data->cmd = MOTOR_CMD_SET_SPEED_MODE;
-      }else if(mode == MOTOR_CMD_SET_LOOP_MODE){
-        data->cmd = MOTOR_CMD_SET_LOOP_MODE;
-      }
-    }
-}
-
-void motor_set_ref_param(int8_t flag, float current_ref,float speed_ref)
-{
-    /* Get motor devices from device tree */
-    const struct device *motors[] = {
-        #if DT_NODE_HAS_STATUS(DT_NODELABEL(motor0), okay)
-                DEVICE_DT_GET(DT_NODELABEL(motor0)),
-        #endif
-        #if DT_NODE_HAS_STATUS(DT_NODELABEL(motor1), okay)
-                DEVICE_DT_GET(DT_NODELABEL(motor1))
-        #endif
-        };
-
-        const struct device *motor;
-        const struct motor_config *cfg;
-        const struct device *foc;        
-        struct foc_data *f_data;
-
-        /* Process each motor */
-        for(uint8_t i = 0;i < ARRAY_SIZE(motors);i++)
-        {
-          if (!device_is_ready(motors[i])) 
-          {
-            LOG_ERR("Motor %d not ready", i);
-            continue;
-          }
-          motor = motors[i];
-
-          cfg = motor->config;
-          foc = cfg->foc_dev;
-          f_data = foc->data;
-          
-          f_data->iq_ref = current_ref;
-          f_data->speed_ref = speed_ref;
-        }    
-}
-
 void motor_cmd_set(int16_t cmd,void *pdata,int8_t datalen)
 {
     /* Get motor devices from device tree */
@@ -170,11 +98,9 @@ void motor_cmd_set(int16_t cmd,void *pdata,int8_t datalen)
             break;
           case MOTOR_CMD_SET_SPEED:
             {
-              if(data->statue != MOTOR_STATE_CLOSED_LOOP)
-              {
-                break;
-              }
-              foc_write_data(foc_dev,FOC_PARAM_DQ_REF,(float *)pdata);
+              // foc_write_data(foc_dev,FOC_PARAM_DQ_REF,(float *)pdata);//力矩调试参数
+              foc_write_data(foc_dev,FOC_PARAM_SPEED_REF,(float *)pdata);
+              statemachine_setsig(fsm,MOTOR_CMD_SET_SPEED);
             }
             break;
           case MOTOR_CMD_SET_PIDPARAM:
@@ -193,7 +119,6 @@ void motor_cmd_set(int16_t cmd,void *pdata,int8_t datalen)
             break;
           }
       }     
-
 }
 
 /**
@@ -220,6 +145,8 @@ static void foc_curr_regulator(void *ctx)
     LL_GPIO_SetOutputPin(GPIOE, GPIO_PIN_1);
     currsmp_get_currents(currsmp, &current_now);
     data->eangle = feedback_get_eangle(cfg->feedback);
+    foc_speedexcu(foc,feedback_get_rads(cfg->feedback)*95493.0f*0.2f);
+
     /* Generate test signals for open loop */
     float alph, beta, sin_the, cos_the;
     sin_cos_f32(((data->eangle - _PI_2_) * 57.2957795131f), &sin_the, &cos_the);
@@ -239,7 +166,7 @@ static void foc_curr_regulator(void *ctx)
       d_out = pid_contrl((pid_cb_t *)(&data->id_pid), 0.0f, data->i_d);
       // d_out = 0.0f;
       q_out = pid_contrl((pid_cb_t *)(&data->iq_pid), data->iq_ref, data->i_q);
-      // q_out = -0.02f;
+      // q_out = -0.02f;  
     }else{
       d_out = 0.0f;
       q_out = 0.0f;
@@ -294,7 +221,7 @@ static int motor_init(const struct device *dev)
     pid_init(&(data->id_pid),0.016f,0.008f,0.5f,12.0f,-12.0f);
     pid_init(&(data->iq_pid),0.016f,0.008f,0.5f,12.0f,-12.0f);
     /* Initialize state machine */
-    statemachine_init(cfg->fsm, dev->name, motor_open_loop_mode, (void *)dev,motor_sig_arr,ARRAY_SIZE(motor_sig_arr));
+    statemachine_init(cfg->fsm, dev->name, motor_speed_control_mode, (void *)dev,motor_sig_arr,ARRAY_SIZE(motor_sig_arr));
     return 0;
 }
 

@@ -171,8 +171,10 @@ static float _normalize_angle(float angle)
         break;        
     }
 
-    hall->realcacle_angle = psect[cur_sect].angle;
-
+    if(cur_sect == 6)
+    {
+        hall->realcacle_angle = psect[cur_sect].angle;
+    }
     hall->pre_sect = cur_sect;
  }
  /* API implementation */
@@ -188,7 +190,9 @@ static float _normalize_angle(float angle)
      float diff = (delt_cnt)*ABZ_ENCODER_RESOLUTION;
 
      hall->realcacle_angle += diff;     
-     hall->speed = (hall->realcacle_angle - hall->pre_angle)/95493.0f;
+    //  hall->speed = (hall->realcacle_angle - hall->pre_angle)*95493.0f;
+    hall->speed = (diff);
+
      hall->pre_angle = hall->realcacle_angle;
      return hall->realcacle_angle;
  }
