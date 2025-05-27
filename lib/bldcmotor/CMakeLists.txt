@@ -4,5 +4,6 @@
   zephyr_library_sources(motor.c)
   zephyr_library_sources(motor_thread.c)
   zephyr_library_sources(motor_mode.c)
+  zephyr_library_sources(motor_internal.c)
 
 

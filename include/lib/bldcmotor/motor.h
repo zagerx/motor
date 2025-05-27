@@ -29,7 +29,7 @@ enum motor_state{
     } ;
     
     enum motor_mode{
-    MOTOR_MODE_OPEN_LOOP,
+    // MOTOR_MODE_OPEN_LOOP,
     MOTOR_MODE_SPEED,
     MOTOR_MODE_POSI,
     MOTOR_MODE_TORQUE,
@@ -38,7 +38,7 @@ enum motor_state{
     
     enum motor_cmd{
       MOTOR_CMD_SET_SPEED_MODE = USER_SIG,// 进入速度模式
-      MOTOR_CMD_SET_LOOP_MODE,
+      MOTOR_CMD_SET_LOOP_MODE_1111111111,
       MOTOR_CMD_SET_TORQUE_MODE,
       MOTOR_CMD_SET_ENABLE,
       MOTOR_CMD_SET_DISABLE,

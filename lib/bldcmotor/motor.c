@@ -14,7 +14,6 @@
 /* System includes */
 #include "algorithmlib/pid.h"
 #include "stm32h723xx.h"
-// #include "stm32h7xx_hal_gpio.h"
 #include "stm32h7xx_ll_gpio.h"
 
 #include "zephyr/device.h"
@@ -38,19 +37,26 @@
 LOG_MODULE_REGISTER(motor, LOG_LEVEL_DBG);
 
 /* External FSM state handlers */
-extern fsm_rt_t motor_open_loop_mode(fsm_cb_t *obj);
+extern fsm_rt_t motor_torque_control_mode(fsm_cb_t *obj);
 extern fsm_rt_t motor_speed_control_mode(fsm_cb_t *obj);
 
-static struct state_transition_map motor_sig_arr[] = {
-  {.signal = NULL_USE_SING,.target_state = -1},
-  {.signal = MOTOR_CMD_SET_ENABLE,.target_state = MOTOR_STATE_INIT},
-  {.signal = MOTOR_CMD_SET_DISABLE,.target_state = MOTOR_STATE_STOP},
-  {.signal = MOTOR_CMD_SET_PIDPARAM,.target_state = MOTOR_STATE_PARAM_UPDATE},
-  {.signal = MOTOR_CMD_SET_SPEED,.target_state = MOTOR_STATE_CLOSED_LOOP},
+/**
+ * motor_state_map - Motor FSM signal-to-state transition mapping
+ * @signal: Trigger signal
+ * @target_state: Resulting state after signal processing
+ */
+static struct state_transition_map motor_state_map[] = {
+	/* Reserved signals */
+  {.signal = NULL_USE_SING,            .target_state = -1},
+	/* Command signals */
+  {.signal = MOTOR_CMD_SET_ENABLE,     .target_state = MOTOR_STATE_INIT},
+  {.signal = MOTOR_CMD_SET_DISABLE,    .target_state = MOTOR_STATE_STOP},
+  {.signal = MOTOR_CMD_SET_PIDPARAM,   .target_state = MOTOR_STATE_PARAM_UPDATE},
+  {.signal = MOTOR_CMD_SET_SPEED,      .target_state = MOTOR_STATE_CLOSED_LOOP},
 };
 /**
  * @brief Set motor operating mode
- * @param mode Requested mode (MOTOR_CMD_SET_SPEED_MODE/MOTOR_CMD_SET_LOOP_MODE)
+ * @param mode Requested mode (MOTOR_CMD_SET_SPEED_MODE/MOTOR_CMD_SET_TORQUE_MODE)
  *
  * Iterates through all configured motors and sets their command mode.
  * Skips motors that aren't ready.
@@ -89,6 +95,10 @@ void motor_cmd_set(int16_t cmd,void *pdata,int8_t datalen)
         foc_dev = cfg->foc_dev;
         switch (cmd) {
           case  MOTOR_CMD_SET_SPEED_MODE:
+            data->cmd = MOTOR_CMD_SET_SPEED_MODE;
+            break;
+          case MOTOR_CMD_SET_TORQUE_MODE:
+            data->cmd = MOTOR_CMD_SET_TORQUE_MODE;
             break;
           case MOTOR_CMD_SET_ENABLE:
             statemachine_setsig(fsm,MOTOR_CMD_SET_ENABLE);
@@ -98,8 +108,11 @@ void motor_cmd_set(int16_t cmd,void *pdata,int8_t datalen)
             break;
           case MOTOR_CMD_SET_SPEED:
             {
-              // foc_write_data(foc_dev,FOC_PARAM_DQ_REF,(float *)pdata);//力矩调试参数
-              foc_write_data(foc_dev,FOC_PARAM_SPEED_REF,(float *)pdata);
+              if(data->mode == MOTOR_MODE_SPEED){
+                foc_write_data(foc_dev,FOC_PARAM_SPEED_REF,(float *)pdata);                
+              }else if(data->mode == MOTOR_MODE_TORQUE){
+                foc_write_data(foc_dev,FOC_PARAM_DQ_REF,(float *)pdata);
+              }
               statemachine_setsig(fsm,MOTOR_CMD_SET_SPEED);
             }
             break;
@@ -214,14 +227,8 @@ static int motor_init(const struct device *dev)
     currsmp_configure(currsmp, foc_curr_regulator, (void *)dev);
     LOG_INF("foc_init name: %s", dev->name);   
    
-    // pid_cb_t *id_pid,*iq_pid;
-    const struct device *foc = cfg->foc_dev;
-    struct foc_data *data = foc->data;
-    
-    pid_init(&(data->id_pid),0.016f,0.008f,0.5f,12.0f,-12.0f);
-    pid_init(&(data->iq_pid),0.016f,0.008f,0.5f,12.0f,-12.0f);
     /* Initialize state machine */
-    statemachine_init(cfg->fsm, dev->name, motor_speed_control_mode, (void *)dev,motor_sig_arr,ARRAY_SIZE(motor_sig_arr));
+    statemachine_init(cfg->fsm, dev->name, motor_torque_control_mode, (void *)dev,motor_state_map,ARRAY_SIZE(motor_state_map));
     return 0;
 }
 
@@ -263,21 +270,22 @@ void motor_task(void *obj)
         data = motor->data;
 
         /* Handle mode change requests */
-        // switch (data->cmd) {
-        //     case MOTOR_CMD_SET_SPEED_MODE:
-        //         TRAN_STATE(cfg->fsm, motor_speed_control_mode);
-        //         data->cmd = MOTOR_CMD_UNSED;
-        //     break;
-        //     case MOTOR_CMD_SET_LOOP_MODE:
-        //         TRAN_STATE(cfg->fsm, motor_open_loop_mode);
-        //         data->cmd = MOTOR_CMD_UNSED;
-        //     break;
-        //     case MOTOR_CMD_SET_TORQUE_MODE:
-        //     break;
-        //     default:
-        //     break;
-        // }
-        
+        switch (data->cmd) {
+            case MOTOR_CMD_SET_SPEED_MODE:
+                if(data->mode != MOTOR_MODE_SPEED)
+                {
+                  TRAN_STATE(cfg->fsm, motor_speed_control_mode);
+                }
+            break;
+            case MOTOR_CMD_SET_TORQUE_MODE:
+                if(data->mode != MOTOR_MODE_TORQUE)
+                {
+                  TRAN_STATE(cfg->fsm, motor_torque_control_mode);
+                }
+            break;
+            default:
+            break;
+        }
         /* Run state machine */
         DISPATCH_FSM(cfg->fsm);
     }
