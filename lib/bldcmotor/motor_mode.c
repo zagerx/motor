@@ -130,9 +130,9 @@ fsm_rt_t motor_speed_control_mode(fsm_cb_t *obj) {
   case ENTER:
     m_data->mode = MOTOR_MODE_SPEED;
     LOG_INF("Enter %s speed mode", obj->name);
-    pid_init(&(f_data->id_pid), 0.016f, 0.008f, 0.5f, 12.0f, -12.0f);
-    pid_init(&(f_data->iq_pid), 0.016f, 0.008f, 0.5f, 12.0f, -12.0f);
-    pid_init(&(f_data->speed_pid), 0.20f, 0.018f, 0.5f, 12.0f, -12.0f);
+    pid_init(&(f_data->id_pid), 0.016f, 0.008f, 0.5f, 24.0f, -24.0f);
+    pid_init(&(f_data->iq_pid), 0.016f, 0.008f, 0.5f, 24.0f, -24.0f);
+    pid_init(&(f_data->speed_pid), 0.0245f, 0.00135f, 0.5f, 48.0f, -48.0f);
     motor_start(motor);
     obj->chState = MOTOR_STATE_IDLE;
     break;
@@ -162,7 +162,7 @@ fsm_rt_t motor_speed_control_mode(fsm_cb_t *obj) {
     float *param = (float *)obj->p2;
     kp = param[0];
     ki = param[1];
-    pid_init(&(f_data->speed_pid), kp, ki, 0.50f, 12.0f, -12.0f);
+    pid_init(&(f_data->speed_pid), kp, ki, 0.50f, 48.0f, -48.0f);
     LOG_INF("pid param %f,%f", (double)kp, (double)ki);
     param[0] = 0.0f;
     param[1] = 0.0f;

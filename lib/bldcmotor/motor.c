@@ -157,6 +157,7 @@ static void foc_curr_regulator(void *ctx)
     /* Get current measurements */
     LL_GPIO_SetOutputPin(GPIOE, GPIO_PIN_1);
     currsmp_get_currents(currsmp, &current_now);
+    data->i_a = current_now.i_a;data->i_b = current_now.i_b;data->i_c = current_now.i_c;
     data->eangle = feedback_get_eangle(cfg->feedback);
     foc_speedexcu(foc,feedback_get_rads(cfg->feedback)*95493.0f*0.2f);
 

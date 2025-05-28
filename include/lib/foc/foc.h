@@ -35,6 +35,7 @@ enum FOC_DATA_INDEX{
     float speed_real;
     lowfilter_t speed_filter;
     /* Read only variables */
+    float i_a,i_b,i_c;
     float i_d, i_q;                 /* D/Q axis currents */
     float rads;                     /* Rotor speed (rad/s) */
     float angle;                    /* Mechanical angle */
