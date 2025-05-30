@@ -11,7 +11,7 @@
 #define __LIB_SVM_SVM_H_
 
 #include <stdint.h>
-
+#include <stdbool.h>
 /**
  * @defgroup spinner_control_svm Space Vector Modulation (SVM) API
  * @{
@@ -26,7 +26,13 @@ typedef struct {
 	/** C channel duty cycle. */
 	float c;
 } svm_duties_t;
-
+// 调制比控制结构体
+typedef struct {
+    float max_modulation; // 最大允许调制比 (0.95~1.15)
+    float fsw;            // 开关频率 (Hz)
+    float dead_time;      // 死区时间 (秒)
+    bool overmodulation;  // 过调制标志
+} modulation_ctrl_t;
 /** @brief SVM state. */
 typedef struct svm {
 	/** SVM sector. */
@@ -61,6 +67,10 @@ void svm_init(svm_t *svm);
  */
 void svm_set(svm_t *svm, float va, float vb);
 
+
+void modulation_manager_init(modulation_ctrl_t *ctrl, float max_modulation);
+void apply_voltage_limiting(modulation_ctrl_t *ctrl, float *vd, float *vq,float Vdc);
+void apply_svm_compensation(modulation_ctrl_t *ctrl, float *valpha, float *vbeta,float Vdc); 
 /** @} */
 
 #endif /* _SPINNER_LIB_SVM_SVM_H_ */

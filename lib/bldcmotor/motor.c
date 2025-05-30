@@ -22,7 +22,7 @@
 #include <zephyr/logging/log.h>
 
 /* Local includes */
-#include <lib/focutils/utils/utils.h>
+#include <lib/focutils/utils/focutils.h>
 #include <lib/bldcmotor/motor.h>
 #include <lib/foc/foc.h>//TODO
 #include <drivers/currsmp.h>
