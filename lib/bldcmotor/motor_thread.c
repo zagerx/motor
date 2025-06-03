@@ -20,7 +20,7 @@
  LOG_MODULE_REGISTER(motor_thread, LOG_LEVEL_DBG);
  
  /* Thread stack definition */
- K_THREAD_STACK_DEFINE(motor_thread_stack, 1024);
+ K_THREAD_STACK_DEFINE(motor_thread_stack, 2048);
  
  /* Device tree node aliases */
  #define LED0_NODE DT_ALIAS(led0)
