@@ -22,6 +22,8 @@
 #include <lib/foc/foc.h> //TODO
 #include <statemachine/statemachine.h>
 #include <zephyr/logging/log.h>
+#include "stm32h7xx_ll_gpio.h"
+
 /* Module logging setup */
 LOG_MODULE_REGISTER(motor_mode, LOG_LEVEL_DBG);
 
@@ -42,6 +44,13 @@ fsm_rt_t motor_torque_control_mode(fsm_cb_t *obj) {
   const struct device *foc =
       ((const struct motor_config *)motor->config)->foc_dev;
   struct foc_data *data = foc->data;
+  LL_GPIO_SetOutputPin(GPIOE, GPIO_PIN_1);
+
+  float bus_vol = currsmp_get_busvol();
+
+  LL_GPIO_ResetOutputPin(GPIOE, GPIO_PIN_1);
+
+  foc_write_data(foc, FOC_PARAM_BUSVOL, &bus_vol);
 
   statemachine_updatestatus(obj, obj->sig);
 
@@ -125,6 +134,8 @@ fsm_rt_t motor_speed_control_mode(fsm_cb_t *obj) {
       ((const struct motor_config *)motor->config)->foc_dev;
   struct foc_data *f_data = foc->data;
 
+  float bus_vol = currsmp_get_busvol();
+  foc_write_data(foc, FOC_PARAM_BUSVOL, &bus_vol);
   statemachine_updatestatus(obj, obj->sig);
   switch (obj->chState) {
   case ENTER:

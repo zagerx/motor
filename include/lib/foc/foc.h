@@ -21,8 +21,19 @@ enum FOC_DATA_INDEX{
     FOC_PARAM_SPEED_REAL,
     FOC_PARAM_ME_ANGLE_REAL,
     FOC_PARAM_AB_REAL,
+
+    FOC_PARAM_BUSVOL,
+    FOC_PARAM_BUSCURR,
 };
 /* FOC runtime data */
+// 调制比控制结构体
+typedef struct {
+    float max_modulation; // 最大允许调制比 (0.95~1.15)
+    float fsw;            // 开关频率 (Hz)
+    float dead_time;      // 死区时间 (秒)
+    bool overmodulation;  // 过调制标志
+} modulation_ctrl_t;
+
  struct foc_data {
     svm_t *svm_handle;              /* Space Vector Modulation handle */
 
@@ -34,6 +45,18 @@ enum FOC_DATA_INDEX{
     float speed_ref;
     float speed_real;
     lowfilter_t speed_filter;
+	modulation_ctrl_t modulation;
+    /** 新增字段 - 电流信息 */
+    float last_comp_alpha;  // 最后一次α轴补偿量
+    float last_comp_beta;   // 最后一次β轴补偿量
+    float i_alpha;          // α轴电流 (需在调用前更新)
+    float i_beta;           // β轴电流 (需在调用前更新)
+
+    float bus_vol;
+    float debug_a;
+    float debug_b;
+    float debug_c;
+    float debug_d;
     /* Read only variables */
     float i_a,i_b,i_c;
     float i_d, i_q;                 /* D/Q axis currents */
@@ -41,7 +64,6 @@ enum FOC_DATA_INDEX{
     float angle;                    /* Mechanical angle */
     float eangle;                   /* Electrical angle */
     float sin_eangle, cos_eangle;   /* sin/cos of electrical angle */
-    float v_alpha, v_beta;          /* Alpha/beta voltages */
     float v_q, v_d;                 /* Q/D axis voltages */
 };
 
@@ -72,6 +94,8 @@ static inline void foc_write_data(const struct device* dev,int16_t flag,float* i
 }
 
 extern  float foc_speedexcu(const struct device* dev,float cur_speed);
+void svm_apply_voltage_limiting(const struct device* dev, float *vd, float *vq,float Vdc);
+void svm_apply_svm_compensation(const struct device* dev, float *valpha, float *vbeta,float Vdc) ;
 
 #endif
 

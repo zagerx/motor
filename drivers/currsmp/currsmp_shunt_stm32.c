@@ -5,6 +5,7 @@
 
  #include "stm32h7xx_ll_adc.h"
 #include <stdint.h>
+#include <sys/_intsup.h>
 #include <zephyr/logging/log.h>
  #include <zephyr/device.h>
  #include <zephyr/drivers/adc.h>
@@ -197,10 +198,10 @@
      while(wait_loop_index != 0) { wait_loop_index--; }
      if(!cfg->slave_mode_flag)
      {
-         LL_ADC_REG_SetSequencerRanks(cfg->adc, LL_ADC_REG_RANK_1, LL_ADC_CHANNEL_3);
-         LL_ADC_SetChannelSamplingTime(cfg->adc, LL_ADC_CHANNEL_3, LL_ADC_SAMPLINGTIME_1CYCLE_5);
-         LL_ADC_SetChannelSingleDiff(cfg->adc, LL_ADC_CHANNEL_3, LL_ADC_SINGLE_ENDED);
-         LL_ADC_SetChannelPreselection(cfg->adc, LL_ADC_CHANNEL_3);
+        LL_ADC_REG_SetSequencerRanks(cfg->adc, LL_ADC_REG_RANK_1, LL_ADC_CHANNEL_15);
+        LL_ADC_SetChannelSamplingTime(cfg->adc, LL_ADC_CHANNEL_15, LL_ADC_SAMPLINGTIME_1CYCLE_5);
+        LL_ADC_SetChannelSingleDiff(cfg->adc, LL_ADC_CHANNEL_15, LL_ADC_SINGLE_ENDED);
+        LL_ADC_SetChannelPreselection(cfg->adc, LL_ADC_CHANNEL_15);
      
          LL_ADC_INJ_SetSequencerRanks(cfg->adc, LL_ADC_INJ_RANK_1, LL_ADC_CHANNEL_14);
          LL_ADC_SetChannelSamplingTime(cfg->adc, LL_ADC_CHANNEL_14, LL_ADC_SAMPLINGTIME_1CYCLE_5);
@@ -218,11 +219,11 @@
          LL_ADC_SetChannelPreselection(cfg->adc,LL_ADC_CHANNEL_16);
          LL_ADC_SetChannelPreselection(cfg->adc,LL_ADC_CHANNEL_17);        
      }else{
-         LL_ADC_REG_SetSequencerRanks(cfg->adc, LL_ADC_REG_RANK_1, LL_ADC_CHANNEL_15);
-         LL_ADC_SetChannelSamplingTime(cfg->adc, LL_ADC_CHANNEL_15, LL_ADC_SAMPLINGTIME_1CYCLE_5);
-         LL_ADC_SetChannelSingleDiff(cfg->adc, LL_ADC_CHANNEL_15, LL_ADC_SINGLE_ENDED);
-         LL_ADC_SetChannelPreselection(cfg->adc, LL_ADC_CHANNEL_15);
-       
+         LL_ADC_REG_SetSequencerRanks(cfg->adc, LL_ADC_REG_RANK_1, LL_ADC_CHANNEL_3);
+         LL_ADC_SetChannelSamplingTime(cfg->adc, LL_ADC_CHANNEL_3, LL_ADC_SAMPLINGTIME_1CYCLE_5);
+         LL_ADC_SetChannelSingleDiff(cfg->adc, LL_ADC_CHANNEL_3, LL_ADC_SINGLE_ENDED);
+         LL_ADC_SetChannelPreselection(cfg->adc, LL_ADC_CHANNEL_3);    
+
          LL_ADC_INJ_SetSequencerRanks(cfg->adc, LL_ADC_INJ_RANK_3, LL_ADC_CHANNEL_9);
          LL_ADC_SetChannelSamplingTime(cfg->adc, LL_ADC_CHANNEL_9, LL_ADC_SAMPLINGTIME_1CYCLE_5);
          LL_ADC_SetChannelSingleDiff(cfg->adc, LL_ADC_CHANNEL_9, LL_ADC_SINGLE_ENDED);
@@ -271,7 +272,13 @@
 
      return 0;
  }
- 
+ float currsmp_get_busvol(void)
+ {
+   LL_ADC_REG_StartConversion(ADC1);
+   while(!LL_ADC_IsActiveFlag_EOC(ADC1));
+   uint32_t ch14_value = LL_ADC_REG_ReadConversionData16(ADC1);
+   return ch14_value*0.01632f;// (3.3f/4096*ch14_value)*(100.0f/(104.7f)); 
+ } 
  /** @internal Helper macro to define the first instance with a specific IRQn. */
  #define FIRST_WITH_IRQN_INTERNAL(n, irqn)			\
      COND_CODE_1(IS_EQ(irqn, DT_IRQN(DT_INST_PARENT(n))), (n,), (EMPTY,))

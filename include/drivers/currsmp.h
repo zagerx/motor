@@ -75,6 +75,7 @@
      api->get_currents(dev, curr);
  }
  
+ float currsmp_get_busvol(void);
  
  /** @} */
  

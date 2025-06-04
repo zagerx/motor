@@ -154,8 +154,8 @@ static void foc_curr_regulator(void *ctx)
     struct currsmp_curr current_now;
 
     struct motor_data *m_data = dev->data;
+    svm_t *svm = data->svm_handle;
     /* Get current measurements */
-    LL_GPIO_SetOutputPin(GPIOE, GPIO_PIN_1);
     currsmp_get_currents(currsmp, &current_now);
     data->i_a = current_now.i_a;data->i_b = current_now.i_b;data->i_c = current_now.i_c;
     data->eangle = feedback_get_eangle(cfg->feedback);
@@ -165,8 +165,8 @@ static void foc_curr_regulator(void *ctx)
     float alph, beta, sin_the, cos_the;
     sin_cos_f32(((data->eangle - _PI_2_) * 57.2957795131f), &sin_the, &cos_the);
 
-    clarke_f32(current_now.i_a,current_now.i_b,&(data->v_alpha),&(data->v_beta));
-    park_f32((data->v_alpha),(data->v_beta),&(data->i_d),&(data->i_q),sin_the,cos_the);
+    clarke_f32(current_now.i_a,current_now.i_b,&(data->i_alpha),&(data->i_beta));
+    park_f32((data->i_alpha),(data->i_beta),&(data->i_d),&(data->i_q),sin_the,cos_the);
     
     /* Update rotor angle */
     data->self_theta += 0.0008f;
@@ -188,30 +188,36 @@ static void foc_curr_regulator(void *ctx)
     /*
 
      */
-     const float Vmax = 12.0f; // 根据系统参数设置
-     float mag_sq = d_out*d_out + q_out*q_out;
-     if (mag_sq > Vmax*Vmax) {
-        float temp ;
-        sqrt_f32(mag_sq,&temp);
-         float scale = Vmax / temp;
-         d_out *= scale;
-         q_out *= scale;
-     }
+    //  const float Vmax = 12.0f; // 根据系统参数设置
+    //  float mag_sq = d_out*d_out + q_out*q_out;
+    //  if (mag_sq > Vmax*Vmax) {
+    //     float temp ;
+    //     sqrt_f32(mag_sq,&temp);
+    //      float scale = Vmax / temp;
+    //      d_out *= scale;
+    //      q_out *= scale;
+    //  }
+
+    svm_apply_voltage_limiting(foc,&d_out, &q_out,data->bus_vol);
 
     /* Perform inverse Park transform */
     sin_cos_f32((data->eangle * 57.2957795131f), &sin_the, &cos_the);
     inv_park_f32(d_out, q_out, &alph, &beta, sin_the, cos_the);
-    
+
+    // data->debug_a = alph;data->debug_b = beta;
+    // svm_apply_svm_compensation(foc,&(data->debug_a),&(data->debug_b),data->bus_vol);
+    // svm_apply_svm_compensation(foc,&(alph),&(beta),data->bus_vol);
     /* Generate PWM outputs */
+    // data->debug_c = alph;data->debug_d = beta;
     foc_modulate(foc,alph,beta);
-    svm_t *svm = data->svm_handle;
+    
     pwm_set_phase_voltages(cfg->pwm, svm->duties.a, svm->duties.b, svm->duties.c);
-    LL_GPIO_ResetOutputPin(GPIOE, GPIO_PIN_1);
 
 }
 
 /**
  * @brief Motor device initialization
+
  * @param dev Motor device instance
  * @return 0 on success, negative errno on failure
  *

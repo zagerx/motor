@@ -19,7 +19,6 @@
  * Public
  ******************************************************************************/
  LOG_MODULE_REGISTER(SVM, LOG_LEVEL_DBG);
-
 void svm_init(svm_t *svm)
 {
 	svm->sector = 0U;
@@ -119,85 +118,3 @@ void svm_set(svm_t *svm, float va, float vb)
 	// svm->duties.c = CLAMP(svm->duties.c, svm->d_min, svm->d_max);
 }
 
-
-// 初始化调制比控制器
-void modulation_manager_init(modulation_ctrl_t *ctrl, float max_modulation) {
-    ctrl->max_modulation = max_modulation;
-    ctrl->fsw = 10000.0f;     // 默认10kHz
-    ctrl->dead_time = 1e-6f;   // 默认1μs死区
-    ctrl->overmodulation = false;
-}
-
-// 电压限制函数 - 在dq坐标系应用
-void apply_voltage_limiting(modulation_ctrl_t *ctrl, float *vd, float *vq,float Vdc)
-{
-    // 计算最大允许相电压幅值 (Vdc/sqrt(3))
-    const float Vmax_linear = Vdc * 0.57735f * ctrl->max_modulation; // 0.57735=1/sqrt(3)
-    float Vmag ;
-    sqrt_f32((*vd * *vd + *vq * *vq),&Vmag);
-    
-    if (Vmag > Vmax_linear) {
-        // 进入过调制区域
-        ctrl->overmodulation = true;
-        
-        // 线性缩放
-        float scale = Vmax_linear / Vmag;
-        *vd *= scale;
-        *vq *= scale;
-    } else {
-        ctrl->overmodulation = false;
-    }
-}
-
-// SVM补偿函数 - 在αβ坐标系应用
-void apply_svm_compensation(modulation_ctrl_t *ctrl, float *valpha, float *vbeta,float Vdc) 
-{
-    // 1. 死区补偿
-    if (ctrl->dead_time > 0) {
-        // 计算死区电压损失 (伏特)
-        float V_dead_comp = ctrl->dead_time * ctrl->fsw * Vdc;
-        
-        // 计算电压矢量幅值
-        float Vmag ;
-        sqrt_f32((*valpha * *valpha + *vbeta * *vbeta),&Vmag);
-            
-        if (Vmag > 1e-6f) { // 避免除以零
-            // 方向保持不变的补偿
-            float comp_alpha = *valpha * (V_dead_comp / Vmag);
-            float comp_beta = *vbeta * (V_dead_comp / Vmag);
-            
-            *valpha += comp_alpha;
-            *vbeta += comp_beta;
-        }
-    }
-    
-    // 2. 过调制处理
-    if (ctrl->overmodulation) {
-        // 计算当前调制比
-        float Vref;
-        sqrt_f32(*valpha * *valpha + *vbeta * *vbeta,&Vref);
-        float m = Vref / (Vdc * 0.57735f);
-        
-        // 简单过调制处理：保持角度，限制幅值
-        float max_voltage = Vdc * 0.57735f * 1.1547f; // 最大理论值(2/√3)
-        
-        if (m > 1.1547f) {
-            // 方波模式 (六步换向) - 特殊处理
-            *valpha = 0; 
-            *vbeta = 0;
-        } else {
-            // 计算角度
-            float angle = atan2f(*vbeta, *valpha);
-            
-            // 应用限幅
-            *valpha = max_voltage * cosf(angle);
-            *vbeta = max_voltage * sinf(angle);
-        }
-    }
-}
-// 根据温度动态调整
-void update_modulation_limit(modulation_ctrl_t *ctrl, float temp_c) {
-    // 温度每升高1°C，降低0.5%调制比
-    float derating = 0.005f * (temp_c - 25.0f);
-    ctrl->max_modulation = 0.95f - fmaxf(0, derating);
-}

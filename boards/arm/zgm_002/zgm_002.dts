@@ -197,9 +197,9 @@
 &adc1 {
 	currsmp0: currsmp {
 		compatible = "st,stm32-currsmp-shunt";
-		pinctrl-0 = <&adc1_inp16_pa0  &adc1_inp17_pa1 &adc1_inp14_pa2>;
+		pinctrl-0 = <&adc1_inp15_pa3 &adc1_inp16_pa0  &adc1_inp17_pa1 &adc1_inp14_pa2>;
 		pinctrl-names = "default";
-		adc-channels = <16 17 14>;
+		adc-channels = <15 16 17 14>;
 		adc-slave = <0>;
 		status = "okay";
 	};
