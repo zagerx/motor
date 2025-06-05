@@ -10,6 +10,8 @@
 #include <algorithmlib/pid.h>
 #include <sys/types.h>
 #include <algorithmlib/filter.h>
+#include <lib/focutils/utils/deadtime_comp.h>
+
 enum FOC_DATA_INDEX{
     FOC_PARAM_D_PID = 0,
     FOC_PARAM_Q_PID,
@@ -51,7 +53,8 @@ typedef struct {
     float last_comp_beta;   // 最后一次β轴补偿量
     float i_alpha;          // α轴电流 (需在调用前更新)
     float i_beta;           // β轴电流 (需在调用前更新)
-
+    DeadTimeCompConfig comp_cfg;    ///< 死区补偿配置
+    DeadTimeCompState comp_state;   ///< 死区补偿状态
     float bus_vol;
     float debug_a;
     float debug_b;
