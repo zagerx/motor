@@ -59,7 +59,7 @@ fsm_rt_t motor_torque_control_mode(fsm_cb_t *obj) {
     LOG_INF("Enter %s loop mode", obj->name);
     m_data->mode = MOTOR_MODE_TORQUE;
     motor_start(motor);
-    pid_init(&(data->id_pid), 0.016f, 0.008f, 0.5f, 12.0f, -12.0f);
+    pid_init(&(data->id_pid), 0.016f, 0.008f, 0.5f, 12.0f, -12.0f);//0.076000  0.080000
     pid_init(&(data->iq_pid), 0.016f, 0.008f, 0.5f, 12.0f, -12.0f);
     obj->chState = MOTOR_STATE_IDLE;
     break;
@@ -141,9 +141,9 @@ fsm_rt_t motor_speed_control_mode(fsm_cb_t *obj) {
   case ENTER:
     m_data->mode = MOTOR_MODE_SPEED;
     LOG_INF("Enter %s speed mode", obj->name);
-    pid_init(&(f_data->id_pid), 0.016f, 0.008f, 0.5f, 24.0f, -24.0f);
-    pid_init(&(f_data->iq_pid), 0.016f, 0.008f, 0.5f, 24.0f, -24.0f);
-    pid_init(&(f_data->speed_pid), 0.0245f, 0.00135f, 0.5f, 48.0f, -48.0f);
+    pid_init(&(f_data->id_pid), 0.076f, 0.08f, 0.5f, 24.0f, -24.0f);
+    pid_init(&(f_data->iq_pid), 0.076f, 0.08f, 0.5f, 24.0f, -24.0f);
+    pid_init(&(f_data->speed_pid), 0.0085f, 0.00135f, 0.5f, 48.0f, -48.0f);
     motor_start(motor);
     obj->chState = MOTOR_STATE_IDLE;
     break;

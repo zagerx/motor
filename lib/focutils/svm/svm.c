@@ -7,6 +7,12 @@
 #include <lib/focutils/svm/svm.h>
 #include <lib/focutils/utils/focutils.h>
 #include <zephyr/logging/log.h>
+
+#undef  CLAMP
+#undef  MIN
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#define CLAMP(val, low, high) (((val) <= (low)) ? (low) : MIN(val, high))
+
 /*******************************************************************************
  * Private
  ******************************************************************************/
@@ -27,8 +33,8 @@ void svm_init(svm_t *svm)
 	svm->duties.b = 0.0f;
 	svm->duties.c = 0.0f;
 
-	svm->d_min = 0.0f;
-	svm->d_max = 1.0f;
+	svm->d_min = 0.01f;
+	svm->d_max = 0.99f;
 }
 
 void svm_set(svm_t *svm, float va, float vb)
@@ -110,11 +116,16 @@ void svm_set(svm_t *svm, float va, float vb)
         case 6:Tcmp1 = Tb;Tcmp2 = Tc;Tcmp3 = Ta;break;
     }
     /*-------------------------占空比---------------------------*/
-    svm->duties.a =(PWM_TS - Tcmp1*2.0f )/PWM_TS;
-    svm->duties.b =(PWM_TS - Tcmp2*2.0f )/PWM_TS;
-    svm->duties.c =(PWM_TS - Tcmp3*2.0f )/PWM_TS;
-	// svm->duties.a = CLAMP(svm->duties.a, svm->d_min, svm->d_max);
-	// svm->duties.b = CLAMP(svm->duties.b, svm->d_min, svm->d_max);
-	// svm->duties.c = CLAMP(svm->duties.c, svm->d_min, svm->d_max);
+    static float da,db,dc;
+    // svm->duties.a =(PWM_TS - Tcmp1*2.0f )/PWM_TS;
+    // svm->duties.b =(PWM_TS - Tcmp2*2.0f )/PWM_TS;
+    // svm->duties.c =(PWM_TS - Tcmp3*2.0f )/PWM_TS;
+	
+    da = (PWM_TS - Tcmp1*2.0f )/PWM_TS;
+    db = (PWM_TS - Tcmp2*2.0f )/PWM_TS;
+    dc = (PWM_TS - Tcmp3*2.0f )/PWM_TS;
+    svm->duties.a = CLAMP(da, svm->d_min, svm->d_max);
+	svm->duties.b = CLAMP(db, svm->d_min, svm->d_max);
+	svm->duties.c = CLAMP(dc, svm->d_min, svm->d_max);
 }
 

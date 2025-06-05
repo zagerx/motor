@@ -180,11 +180,24 @@ static void foc_curr_regulator(void *ctx)
       d_out = pid_contrl((pid_cb_t *)(&data->id_pid), 0.0f, data->i_d);
       // d_out = 0.0f;
       q_out = pid_contrl((pid_cb_t *)(&data->iq_pid), data->iq_ref, data->i_q);
-      // q_out = -0.02f;  
+      // q_out = -0.02f; 
+      svm_apply_voltage_limiting(foc,&d_out, &q_out,data->bus_vol);
+      sin_cos_f32((data->eangle * 57.2957795131f), &sin_the, &cos_the);
+      inv_park_f32(d_out, q_out, &alph, &beta, sin_the, cos_the);
+      float tema,temb;
+      sin_cos_f32(((data->eangle - _PI_2_) * 57.2957795131f), &sin_the, &cos_the);
+      inv_park_f32(d_out, q_out, &tema, &temb, sin_the, cos_the);
+      data->debug_a = tema;data->debug_b = temb;
+      // svm_apply_svm_compensation(foc,&(alph),&(beta),data->bus_vol);
+      svm_apply_svm_compensation(foc,&(tema),&(temb),data->bus_vol);
+      data->debug_c = tema;data->debug_d = temb;
     }else{
       d_out = 0.0f;
       q_out = 0.0f;
+      sin_cos_f32((data->eangle * 57.2957795131f), &sin_the, &cos_the);
+      inv_park_f32(d_out, q_out, &alph, &beta, sin_the, cos_the);
     }
+    foc_modulate(foc,alph,beta);
     /*
 
      */
@@ -198,18 +211,13 @@ static void foc_curr_regulator(void *ctx)
     //      q_out *= scale;
     //  }
 
-    svm_apply_voltage_limiting(foc,&d_out, &q_out,data->bus_vol);
 
     /* Perform inverse Park transform */
-    sin_cos_f32((data->eangle * 57.2957795131f), &sin_the, &cos_the);
-    inv_park_f32(d_out, q_out, &alph, &beta, sin_the, cos_the);
 
     // data->debug_a = alph;data->debug_b = beta;
     // svm_apply_svm_compensation(foc,&(data->debug_a),&(data->debug_b),data->bus_vol);
-    // svm_apply_svm_compensation(foc,&(alph),&(beta),data->bus_vol);
     /* Generate PWM outputs */
     // data->debug_c = alph;data->debug_d = beta;
-    foc_modulate(foc,alph,beta);
     
     pwm_set_phase_voltages(cfg->pwm, svm->duties.a, svm->duties.b, svm->duties.c);
 

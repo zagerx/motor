@@ -139,7 +139,7 @@ static void modulation_manager_init(modulation_ctrl_t *ctrl, float max_modulatio
 {
     ctrl->max_modulation = max_modulation;
     ctrl->fsw = 10000.0f;     // 默认10kHz
-    ctrl->dead_time = 0.6e-6f;   // 默认1μs死区
+    ctrl->dead_time = 1e-6f;   // 默认1μs死区
     ctrl->overmodulation = false;
 }
 
@@ -158,7 +158,7 @@ void svm_apply_svm_compensation(const struct device* dev, float *valpha, float *
  } 
  
  // 1. 计算死区电压损失 (伏特)
- float V_dead_comp = ctrl->dead_time * ctrl->fsw * Vdc;
+ float V_dead_comp =  ctrl->dead_time * ctrl->fsw * Vdc;
  
  // 2. 计算电压矢量幅值
  float V_mag;
@@ -173,35 +173,37 @@ sqrt_f32(*valpha * *valpha + *vbeta * *vbeta,&V_mag);
  // 4. 计算电流方向单位矢量
  float dir_alpha = 0.0f;
  float dir_beta = 0.0f;
- 
- if (I_mag > 0.01f) { // 避免除以零
-     dir_alpha = i_alpha / I_mag;
-     dir_beta = i_beta / I_mag;
- } else {
-     // 电流过零区域 - 使用电压方向作为近似
-     if (V_mag > 0.01f) {
-         dir_alpha = *valpha / V_mag;
-         dir_beta = *vbeta / V_mag;
-     } else {
-         // 无可靠方向信息，不补偿
-         return;
-     }
+
+ if(I_mag<0.001F)
+ {
+    return;
+ }else{
+    dir_alpha = i_alpha / I_mag;
+    dir_beta = i_beta / I_mag;       
  }
- 
- // 5. 过零区域平滑处理
- if (I_mag < 0.1f) { // 10%额定电流以下
-     float k = I_mag / 0.1f; // 线性过渡系数 [0,1]
-     V_dead_comp *= k;
- }
- 
+
+   if (I_mag < 0.05f) { // 完全过零区
+       V_dead_comp *= 0.0f;
+    } else if (I_mag < 0.15f) { // 过渡区
+       float k = (I_mag - 0.05f) / 0.1f; // 0.05~0.15A线性过渡
+       V_dead_comp *= k;
+   }
+
+// 添加补偿限幅
+float max_comp = Vdc * 0.1f; // 最大补偿量限制
+float actual_comp = fminf(V_dead_comp, max_comp);
+
  // 6. 应用补偿 (方向与电流方向相反)
- *valpha = dir_alpha * V_dead_comp;
- *vbeta = dir_beta * V_dead_comp;
+ *valpha += dir_alpha * actual_comp;
+ *vbeta += dir_beta * actual_comp;
  
  // 7. 记录补偿状态 (用于调试)
  f_data->last_comp_alpha = dir_alpha * V_dead_comp;
  f_data->last_comp_beta = dir_beta * V_dead_comp;
 }
+
+
+
 // 根据温度动态调整
 void update_modulation_limit(modulation_ctrl_t *ctrl, float temp_c) {
     // 温度每升高1°C，降低0.5%调制比
@@ -219,8 +221,8 @@ void update_modulation_limit(modulation_ctrl_t *ctrl, float temp_c) {
     pid_init((pid_cb_t*)&(data->id_pid), 0.0f, 0.0f, 0.0f,0.0f,0.0f);
     pid_init((pid_cb_t*)&(data->iq_pid), 0.0f, 0.0f, 0.0f,0.0f,0.0f);
     lowfilter_init((lowfilter_t *)&(data->speed_filter), 10.0f);
-    svm_init((svm_t *)&(data->svm_handle));
-    modulation_manager_init((modulation_ctrl_t*)&(data->modulation),0.95f,650e-6f,10000e-6f);    
+    svm_init((svm_t *)(data->svm_handle));
+    modulation_manager_init((modulation_ctrl_t*)&(data->modulation),0.95f,650e-9f,10000);    
     return 0;
  }
 
