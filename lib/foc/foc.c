@@ -11,6 +11,7 @@
  #include "algorithmlib/filter.h"
 #include "algorithmlib/pid.h"
 #include "lib/focutils/svm/svm.h"
+#include "lib/focutils/utils/deadtime_comp.h"
 #include "zephyr/device.h"
  
  #include <zephyr/logging/log.h>
@@ -150,7 +151,7 @@ void svm_apply_svm_compensation(const struct device* dev, float *valpha, float *
     struct foc_data *f_data = dev->data;
 
     deadtime_compensation_apply(
-        &f_data->comp_cfg,
+        (const DeadTimeCompConfig *)&f_data->comp_cfg,
         &f_data->comp_state,
         valpha,
         vbeta,
@@ -183,7 +184,7 @@ void update_modulation_limit(modulation_ctrl_t *ctrl, float temp_c) {
     modulation_manager_init((modulation_ctrl_t*)&(data->modulation),0.95f,650e-9f,10000);    
     // 初始化死区补偿配置
     deadtime_comp_config_init(
-        &data->comp_cfg,   // 配置结构体
+        (DeadTimeCompConfig*)&data->comp_cfg,   // 配置结构体
         650.0f,            // 死区时间 (ns)
         10000.0f,          // 开关频率 (Hz)
         0.05f,             // 最大补偿比例
@@ -192,7 +193,7 @@ void update_modulation_limit(modulation_ctrl_t *ctrl, float temp_c) {
     );
     
     // 初始化状态结构体
-    // memset(&data->comp_state, 0, sizeof(DeadTimeCompState));
+    memset((void*)&data->comp_state, 0, sizeof(DeadTimeCompState));
 
     return 0;
  }

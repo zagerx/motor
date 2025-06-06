@@ -164,8 +164,10 @@ static void foc_curr_regulator(void *ctx)
     /* Generate test signals for open loop */
     float alph, beta, sin_the, cos_the;
     sin_cos_f32(((data->eangle - _PI_2_) * 57.2957795131f), &sin_the, &cos_the);
-
-    clarke_f32(current_now.i_a,current_now.i_b,&(data->i_alpha),&(data->i_beta));
+    float temp_ia,temp_ib;
+    temp_ia = current_now.i_a;
+    temp_ib = current_now.i_b;
+    clarke_f32(temp_ia,temp_ib,&(data->i_alpha),&(data->i_beta));
     park_f32((data->i_alpha),(data->i_beta),&(data->i_d),&(data->i_q),sin_the,cos_the);
     
     /* Update rotor angle */
@@ -180,21 +182,21 @@ static void foc_curr_regulator(void *ctx)
       d_out = pid_contrl((pid_cb_t *)(&data->id_pid), 0.0f, data->i_d);
       // d_out = 0.0f;
       q_out = pid_contrl((pid_cb_t *)(&data->iq_pid), data->iq_ref, data->i_q);
-      // q_out = -0.02f; 
+      // q_out = -0.05f; 
       svm_apply_voltage_limiting(foc,&d_out, &q_out,data->bus_vol);
-      sin_cos_f32((data->eangle * 57.2957795131f), &sin_the, &cos_the);
+      sin_cos_f32(((data->eangle  - _PI_2_) * 57.2957795131f), &sin_the, &cos_the);
       inv_park_f32(d_out, q_out, &alph, &beta, sin_the, cos_the);
-      float tema,temb;
-      sin_cos_f32(((data->eangle - _PI_2_) * 57.2957795131f), &sin_the, &cos_the);
-      inv_park_f32(d_out, q_out, &tema, &temb, sin_the, cos_the);
-      data->debug_a = tema;data->debug_b = temb;
+      // float tema,temb;
+      // sin_cos_f32(((data->eangle - _PI_2_) * 57.2957795131f), &sin_the, &cos_the);
+      // inv_park_f32(d_out, q_out, &tema, &temb, sin_the, cos_the);
+      // data->debug_a = tema;data->debug_b = temb;
       // svm_apply_svm_compensation(foc,&(alph),&(beta),data->bus_vol);
-      svm_apply_svm_compensation(foc,&(tema),&(temb),data->bus_vol);
-      data->debug_c = tema;data->debug_d = temb;
+      // svm_apply_svm_compensation(foc,&(tema),&(temb),data->bus_vol);
+      // data->debug_c = tema;data->debug_d = temb;
     }else{
       d_out = 0.0f;
       q_out = 0.0f;
-      sin_cos_f32((data->eangle * 57.2957795131f), &sin_the, &cos_the);
+      sin_cos_f32(((data->eangle)* 57.2957795131f), &sin_the, &cos_the);
       inv_park_f32(d_out, q_out, &alph, &beta, sin_the, cos_the);
     }
     foc_modulate(foc,alph,beta);
