@@ -220,4 +220,94 @@ fsm_rt_t motor_speed_control_mode(fsm_cb_t *obj) {
  *
  * TODO: Implement position control logic
  */
-fsm_rt_t motor_position_control_mode(fsm_cb_t *obj) { return fsm_rt_cpl; }
+fsm_rt_t motor_position_control_mode(fsm_cb_t *obj)
+{
+  const struct device *motor = obj->p1;
+
+  struct motor_data *m_data = motor->data;
+  const struct device *foc =
+      ((const struct motor_config *)motor->config)->foc_dev;
+  struct foc_data *f_data = foc->data;
+
+  const struct device *feedback = ((const struct motor_config *)motor->config)->feedback;
+
+  float bus_vol = currsmp_get_busvol();
+  foc_write_data(foc, FOC_PARAM_BUSVOL, &bus_vol);
+  statemachine_updatestatus(obj, obj->sig);
+  switch (obj->chState) {
+  case ENTER:
+    m_data->mode = MOTOR_MODE_POSI;
+    LOG_INF("Enter %s pos mode", obj->name);
+    pid_init(&(f_data->id_pid), 0.08f, 0.006f, 0.5f, 12.0f, -12.0f);//0.076000  0.080000
+    pid_init(&(f_data->iq_pid), 0.08f, 0.006f, 0.5f, 12.0f, -12.0f);
+    pid_init(&(f_data->speed_pid), 0.0085f, 0.00135f, 0.5f, 48.0f, -48.0f);
+    pid_init(&(f_data->pos_pid), 80.0f, 0.0005f, 0.50f, 400.0f, -400.0f);
+    motor_start(motor);
+    obj->chState = MOTOR_STATE_IDLE;
+    break;
+    /*-----------INIT-------------*/
+  case MOTOR_STATE_INIT:
+    m_data->statue = MOTOR_STATE_INIT;
+    LOG_INF("motor status: MOTOR_STATE_INIT");
+    motor_set_threephase_enable(motor);
+    f_data->speed_ref = 0.0f;
+    f_data->pos_ref = 0.0f;
+    feedback_set_pos(feedback);
+    obj->chState = MOTOR_STATE_IDLE;
+    break;
+    /*---------RUNING-------------*/
+  case MOTOR_STATE_CLOSED_LOOP: // Runing
+    m_data->statue = MOTOR_STATE_CLOSED_LOOP;
+    float cur_speed;
+    cur_speed = f_data->speed_real;
+    float cur_pos = f_data->pos_real;
+    f_data->speed_ref =  pid_contrl(&f_data->pos_pid,f_data->pos_ref,cur_pos);
+    f_data->id_ref = 0.0f;
+    f_data->iq_ref = pid_contrl(&f_data->speed_pid, f_data->speed_ref, cur_speed);
+    break;
+    /*-------PARAM UPDATE----------*/
+  case MOTOR_STATE_PARAM_UPDATE:
+    m_data->statue = MOTOR_STATE_PARAM_UPDATE;
+    LOG_INF("motor status: MOTOR_STATE_PARAM_UPDATE");
+    motor_set_threephase_disable(motor);
+    float kp, ki;
+    float *param = (float *)obj->p2;
+    kp = param[0];
+    ki = param[1];
+    pid_init(&(f_data->pos_pid), kp, ki, 0.50f, 400.0f, -400.0f);
+    LOG_INF("pid param %f,%f", (double)kp, (double)ki);
+    param[0] = 0.0f;
+    param[1] = 0.0f;
+    obj->chState = MOTOR_STATE_IDLE;
+    break;
+    /*-----------IDLE-------------*/
+  case MOTOR_STATE_IDLE:
+    m_data->statue = MOTOR_STATE_IDLE;
+    /* Main operational state - handled by FOC */
+    break;
+    /*-----------STOP-------------*/
+  case MOTOR_STATE_STOP:
+    m_data->statue = MOTOR_STATE_STOP;
+    LOG_INF("motor status: MOTOR_STATE_STOP");
+    f_data->iq_ref = 0.0f;
+    f_data->speed_ref = 0.0f;
+    pid_reset(&(f_data->pos_pid));
+    pid_reset(&(f_data->speed_pid));
+    pid_reset(&(f_data->id_pid));
+    pid_reset(&(f_data->iq_pid));
+    motor_set_threephase_disable(motor);
+    obj->chState = MOTOR_STATE_IDLE;
+    break;
+
+  case EXIT:
+    LOG_INF("Exit pos mode");
+    motor_set_threephase_disable(motor);
+    motor_stop(motor);
+    break;
+
+  default:
+    break;
+  }
+  obj->sig = NULL_USE_SING;
+  return fsm_rt_cpl;
+}

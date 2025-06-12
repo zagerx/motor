@@ -39,6 +39,7 @@ LOG_MODULE_REGISTER(motor, LOG_LEVEL_DBG);
 /* External FSM state handlers */
 extern fsm_rt_t motor_torque_control_mode(fsm_cb_t *obj);
 extern fsm_rt_t motor_speed_control_mode(fsm_cb_t *obj);
+extern fsm_rt_t motor_position_control_mode(fsm_cb_t *obj);
 
 /**
  * motor_state_map - Motor FSM signal-to-state transition mapping
@@ -100,6 +101,9 @@ void motor_cmd_set(int16_t cmd,void *pdata,int8_t datalen)
           case MOTOR_CMD_SET_TORQUE_MODE:
             data->cmd = MOTOR_CMD_SET_TORQUE_MODE;
             break;
+          case MOTOR_CMD_SET_POSTION_MODE:
+            data->cmd = MOTOR_CMD_SET_POSTION_MODE;
+            break;
           case MOTOR_CMD_SET_ENABLE:
             statemachine_setsig(fsm,MOTOR_CMD_SET_ENABLE);
             break;
@@ -112,6 +116,8 @@ void motor_cmd_set(int16_t cmd,void *pdata,int8_t datalen)
                 foc_write_data(foc_dev,FOC_PARAM_SPEED_REF,(float *)pdata);                
               }else if(data->mode == MOTOR_MODE_TORQUE){
                 foc_write_data(foc_dev,FOC_PARAM_DQ_REF,(float *)pdata);
+              }else if(data->mode == MOTOR_MODE_POSI){
+                foc_write_data(foc_dev, FOC_PARAM_POSI_REF,(float *)pdata);
               }
               statemachine_setsig(fsm,MOTOR_CMD_SET_SPEED);
             }
@@ -159,7 +165,7 @@ static void foc_curr_regulator(void *ctx)
     currsmp_get_currents(currsmp, &current_now);
     data->i_a = current_now.i_a;data->i_b = current_now.i_b;data->i_c = current_now.i_c;
     data->eangle = feedback_get_eangle(cfg->feedback);
-
+    data->pos_real = feedback_get_position(cfg->feedback);
     foc_speedexcu(foc,feedback_get_rads(cfg->feedback)*95493.0f*0.2f);
 
     /* Generate test signals for open loop */
@@ -278,6 +284,12 @@ void motor_task(void *obj)
                 if(data->mode != MOTOR_MODE_TORQUE)
                 {
                   TRAN_STATE(cfg->fsm, motor_torque_control_mode);
+                }
+            break;
+            case MOTOR_CMD_SET_POSTION_MODE:
+                if(data->mode != MOTOR_MODE_POSI)
+                {
+                  TRAN_STATE(cfg->fsm, motor_position_control_mode);
                 }
             break;
             default:

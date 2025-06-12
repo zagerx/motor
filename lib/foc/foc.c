@@ -57,6 +57,14 @@ static void _write(const struct device* dev,int16_t flag,float *input)
                 data->speed_ref = speed_ref;
             }
             break;
+        case FOC_PARAM_POSI_REF:
+        {
+            float posi_ref;
+            posi_ref = input[0];
+            data->pos_ref = posi_ref;
+        }
+        break;
+
         case FOC_PARAM_DQ_REAL:
             {
                 data->i_d = input[0];

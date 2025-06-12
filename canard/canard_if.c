@@ -224,6 +224,9 @@ static void handle_set_mode(CanardRxTransfer* transfer) {
                 motor_cmd_set(MOTOR_CMD_SET_TORQUE_MODE, NULL, 0);
                 break;
             // 其他模式处理...
+            case custom_data_types_dinosaurs_actuator_wheel_motor_SetMode_Request_2_0_POSITION_MODE:
+                motor_cmd_set(MOTOR_CMD_SET_POSTION_MODE, NULL, 0);
+                break;
         }
 
         // 准备响应

@@ -17,7 +17,7 @@ enum FOC_DATA_INDEX{
     FOC_PARAM_Q_PID,
     FOC_PARAM_DQ_REF,
     FOC_PARAM_SPEED_REF,
-
+    FOC_PARAM_POSI_REF,
 
     FOC_PARAM_DQ_REAL,
     FOC_PARAM_SPEED_REAL,
@@ -43,9 +43,11 @@ typedef struct {
     pid_cb_t id_pid;
     pid_cb_t iq_pid;
     pid_cb_t speed_pid;
+    pid_cb_t pos_pid;    
     float id_ref,iq_ref;
     float speed_ref;
     float speed_real;
+    float pos_real,pos_ref,pos_pre;
     lowfilter_t speed_filter;
 	modulation_ctrl_t modulation;
     /** 新增字段 - 电流信息 */

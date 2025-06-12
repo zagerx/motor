@@ -41,7 +41,8 @@
  
      /* Get  position. unit: rad. */
      float (*get_position)(const struct device *dev);
- 
+
+     void (*set_toli_dis)(const struct device *dev);
      /* feedback calibration */
      int (*calibration)(const struct device *dev);
 
@@ -118,7 +119,15 @@
  
      return 0.0f;
  }
+ static inline void feedback_set_pos(const struct device *dev)
+ {
+     const struct feedback_driver_api *api = dev->api;
  
+     if (api->set_toli_dis) {
+        api->set_toli_dis(dev);
+     }
+ }
+  
  /**
   * @brief Feedback calibration
   *

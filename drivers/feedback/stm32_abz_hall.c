@@ -81,6 +81,7 @@ static float _normalize_angle(float angle)
     float realcacle_angle;
     float pre_angle;
     float speed;
+    float total_distance;
     sect_t positive_sect[7];
     sect_t negative_sect[7];    
  };
@@ -198,11 +199,16 @@ static float _normalize_angle(float angle)
 
      hall->realcacle_angle += diff;
     hall->speed = (diff);
-
+    hall->total_distance += diff; 
      hall->pre_angle = hall->realcacle_angle;
      return hall->realcacle_angle;
  }
- 
+static void abz_stm32_set_total_distance(const struct device *dev)
+{
+    const struct abz_hall_stm32_data *data = dev->data;
+    struct hall_data_t* hall = (struct hall_data_t*)(&data->hall);
+    hall->total_distance = 0.0f;
+}
  static float abz_stm32_get_mangle(const struct device *dev)
  {
      /* TODO: Implement mechanical angle calculation */
@@ -220,7 +226,9 @@ static float _normalize_angle(float angle)
  static float abz_stm32_get_position(const struct device *dev)
  {
      /* TODO: Implement position calculation */
-     return 0.0f;
+     const struct abz_hall_stm32_data *data = dev->data;
+     struct hall_data_t* hall = (struct hall_data_t*)(&data->hall);
+     return hall->total_distance;
  }
   /*
   * Enable hall sensor interface
@@ -259,6 +267,7 @@ static float _normalize_angle(float angle)
      .get_mangle = abz_stm32_get_mangle,
      .get_position = abz_stm32_get_position,
      .hall_start = abz_hall_stm32_enable,
+     .set_toli_dis = abz_stm32_set_total_distance,
  };
  
  /*
