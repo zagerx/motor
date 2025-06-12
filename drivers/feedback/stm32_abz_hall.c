@@ -24,13 +24,19 @@
  #include <stm32_ll_tim.h>
  
  LOG_MODULE_REGISTER(abz_hall_stm32, LOG_LEVEL_DBG);
- #define SCETION_6_BASEANGLE             (0.3416f)
- #define SCETION_4_BASEANGLE             (1.4624f)
- #define SCETION_5_BASEANGLE             (2.4623f)
- #define SCETION_1_BASEANGLE             (3.6222f)
- #define SCETION_3_BASEANGLE             (4.5830f)
- #define SCETION_2_BASEANGLE             (5.5344f)
-
+//  #define SCETION_6_BASEANGLE             (0.3416f)
+//  #define SCETION_4_BASEANGLE             (1.4624f)
+//  #define SCETION_5_BASEANGLE             (2.4623f)
+//  #define SCETION_1_BASEANGLE             (3.6222f)
+//  #define SCETION_3_BASEANGLE             (4.5830f)
+//  #define SCETION_2_BASEANGLE             (5.5344f)
+#define _PI_2 -1.5707f
+ #define SCETION_3_BASEANGLE             (2.8903f-_PI_2)
+ #define SCETION_2_BASEANGLE             (3.9221f-_PI_2)
+ #define SCETION_6_BASEANGLE             (4.9703f-_PI_2)
+ #define SCETION_4_BASEANGLE             (6.0433f-_PI_2)
+ #define SCETION_5_BASEANGLE             (0.7544f-_PI_2)
+ #define SCETION_1_BASEANGLE             (1.7792f-_PI_2)
  #define HALL_POSITIVE_OFFSET            (0.0f)
  #define HALL_NEGATIVE_OFFSET            (0.0f)
 
@@ -39,7 +45,7 @@
 
  #define ABZ_ENCODER_LINES_HALF          (2500)
  #define ABZ_ENCODER_LINES               (5000)//编码器线数
- #define ABZ_ENCODER_RESOLUTION          (0.00628f)//编码器分辨率 2*pi/5000
+ #define ABZ_ENCODER_RESOLUTION          (0.004f)//编码器分辨率 2*pi/5000
 
 static float _normalize_angle(float angle)
 {
@@ -171,9 +177,10 @@ static float _normalize_angle(float angle)
         break;        
     }
 
-    if(cur_sect == 6)
+    // if(cur_sect == 6)
     {
         hall->realcacle_angle = psect[cur_sect].angle;
+        // hall->realcacle_angle = _normalize_angle(hall->realcacle_angle)
     }
     hall->pre_sect = cur_sect;
  }
@@ -189,8 +196,7 @@ static float _normalize_angle(float angle)
      LL_TIM_SetCounter(cfg->timer,ABZ_ENCODER_LINES_HALF);
      float diff = (delt_cnt)*ABZ_ENCODER_RESOLUTION;
 
-     hall->realcacle_angle += diff;     
-    //  hall->speed = (hall->realcacle_angle - hall->pre_angle)*95493.0f;
+     hall->realcacle_angle += diff;
     hall->speed = (diff);
 
      hall->pre_angle = hall->realcacle_angle;
@@ -233,6 +239,17 @@ static float _normalize_angle(float angle)
       if (ret < 0) {
           LOG_ERR("Failed to configure interrupts");
       }
+      int hu_state = gpio_pin_get_dt(&cfg->hu_gpio);
+      int hv_state = gpio_pin_get_dt(&cfg->hv_gpio); 
+      int hw_state = gpio_pin_get_dt(&cfg->hw_gpio);
+     //  LOG_DBG("Hall states - HALL_VAL:%d", hu_state<<2|hv_state<<1|hw_state)
+      /* Update sector information */
+      uint8_t cur_sect;
+      cur_sect = hu_state<<2|hw_state<<1|hv_state;
+
+      const struct abz_hall_stm32_data *data = dev->data;
+      struct hall_data_t* hall = (struct hall_data_t*)(&data->hall);  
+      hall->realcacle_angle = _normalize_angle(hall->negative_sect[cur_sect].angle - 0.523f);
   }
   
  /* Driver API structure */
@@ -358,12 +375,12 @@ static float _normalize_angle(float angle)
          return ret;
      }
      struct hall_data_t *hall = &(data->hall);
-     hall->positive_sect[6].angle = SCETION_6_BASEANGLE + HALL_POSITIVE_OFFSET;
-     hall->positive_sect[4].angle = SCETION_4_BASEANGLE + HALL_POSITIVE_OFFSET;
-     hall->positive_sect[5].angle = SCETION_5_BASEANGLE + HALL_POSITIVE_OFFSET;
-     hall->positive_sect[1].angle = SCETION_1_BASEANGLE + HALL_POSITIVE_OFFSET;
-     hall->positive_sect[3].angle = SCETION_3_BASEANGLE + HALL_POSITIVE_OFFSET;
-     hall->positive_sect[2].angle = SCETION_2_BASEANGLE + HALL_POSITIVE_OFFSET;
+     hall->positive_sect[6].angle = _normalize_angle(SCETION_6_BASEANGLE + HALL_POSITIVE_OFFSET);
+     hall->positive_sect[4].angle = _normalize_angle(SCETION_4_BASEANGLE + HALL_POSITIVE_OFFSET);
+     hall->positive_sect[5].angle = _normalize_angle(SCETION_5_BASEANGLE + HALL_POSITIVE_OFFSET);
+     hall->positive_sect[1].angle = _normalize_angle(SCETION_1_BASEANGLE + HALL_POSITIVE_OFFSET);
+     hall->positive_sect[3].angle = _normalize_angle(SCETION_3_BASEANGLE + HALL_POSITIVE_OFFSET);
+     hall->positive_sect[2].angle = _normalize_angle(SCETION_2_BASEANGLE + HALL_POSITIVE_OFFSET);
      hall->positive_sect[6].diff = _normalize_angle(hall->positive_sect[6].angle - hall->positive_sect[2].angle);
      hall->positive_sect[4].diff = _normalize_angle(hall->positive_sect[4].angle - hall->positive_sect[6].angle);
      hall->positive_sect[5].diff = _normalize_angle(hall->positive_sect[5].angle - hall->positive_sect[4].angle);

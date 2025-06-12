@@ -159,11 +159,13 @@ static void foc_curr_regulator(void *ctx)
     currsmp_get_currents(currsmp, &current_now);
     data->i_a = current_now.i_a;data->i_b = current_now.i_b;data->i_c = current_now.i_c;
     data->eangle = feedback_get_eangle(cfg->feedback);
+
     foc_speedexcu(foc,feedback_get_rads(cfg->feedback)*95493.0f*0.2f);
 
     /* Generate test signals for open loop */
     float alph, beta, sin_the, cos_the;
     sin_cos_f32(((data->eangle - _PI_2_) * 57.2957795131f), &sin_the, &cos_the);
+    
     float temp_ia,temp_ib;
     temp_ia = current_now.i_a;
     temp_ib = current_now.i_b;
@@ -171,28 +173,28 @@ static void foc_curr_regulator(void *ctx)
     park_f32((data->i_alpha),(data->i_beta),&(data->i_d),&(data->i_q),sin_the,cos_the);
     
     /* Update rotor angle */
-    data->self_theta += 0.0008f;
-    if (data->self_theta > 6.28f) {
-        data->self_theta = 0.0f;
-    }
-
     float d_out,q_out;
     if(m_data->statue == MOTOR_STATE_CLOSED_LOOP)
     {
+      data->self_theta += 0.0008f;
+      if (data->self_theta > 6.28f) {
+          data->self_theta = 0.0f;
+      }      
       d_out = pid_contrl((pid_cb_t *)(&data->id_pid), 0.0f, data->i_d);
       // d_out = 0.0f;
       q_out = pid_contrl((pid_cb_t *)(&data->iq_pid), data->iq_ref, data->i_q);
-      // q_out = -0.05f; 
+      // q_out = data->iq_ref; 
       svm_apply_voltage_limiting(foc,&d_out, &q_out,data->bus_vol);
-      sin_cos_f32(((data->eangle  - _PI_2_) * 57.2957795131f), &sin_the, &cos_the);
+      // sin_cos_f32(((data->self_theta) * 57.2957795131f), &sin_the, &cos_the);
+
+      sin_cos_f32(((data->eangle) * 57.2957795131f), &sin_the, &cos_the);
       inv_park_f32(d_out, q_out, &alph, &beta, sin_the, cos_the);
-      // float tema,temb;
-      // sin_cos_f32(((data->eangle - _PI_2_) * 57.2957795131f), &sin_the, &cos_the);
-      // inv_park_f32(d_out, q_out, &tema, &temb, sin_the, cos_the);
-      // data->debug_a = tema;data->debug_b = temb;
-      // svm_apply_svm_compensation(foc,&(alph),&(beta),data->bus_vol);
-      // svm_apply_svm_compensation(foc,&(tema),&(temb),data->bus_vol);
-      // data->debug_c = tema;data->debug_d = temb;
+    }else if(m_data->statue == MOTOR_STATE_ALIGN){
+      d_out = 0.0f;
+      q_out = 0.02;
+      svm_apply_voltage_limiting(foc,&d_out, &q_out,data->bus_vol);
+      sin_cos_f32(((0.0f) * 57.2957795131f), &sin_the, &cos_the);
+      inv_park_f32(d_out, q_out, &alph, &beta, sin_the, cos_the);      
     }else{
       d_out = 0.0f;
       q_out = 0.0f;
@@ -200,29 +202,7 @@ static void foc_curr_regulator(void *ctx)
       inv_park_f32(d_out, q_out, &alph, &beta, sin_the, cos_the);
     }
     foc_modulate(foc,alph,beta);
-    /*
-
-     */
-    //  const float Vmax = 12.0f; // 根据系统参数设置
-    //  float mag_sq = d_out*d_out + q_out*q_out;
-    //  if (mag_sq > Vmax*Vmax) {
-    //     float temp ;
-    //     sqrt_f32(mag_sq,&temp);
-    //      float scale = Vmax / temp;
-    //      d_out *= scale;
-    //      q_out *= scale;
-    //  }
-
-
-    /* Perform inverse Park transform */
-
-    // data->debug_a = alph;data->debug_b = beta;
-    // svm_apply_svm_compensation(foc,&(data->debug_a),&(data->debug_b),data->bus_vol);
-    /* Generate PWM outputs */
-    // data->debug_c = alph;data->debug_d = beta;
-    
     pwm_set_phase_voltages(cfg->pwm, svm->duties.a, svm->duties.b, svm->duties.c);
-
 }
 
 /**
