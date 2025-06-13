@@ -220,6 +220,7 @@ fsm_rt_t motor_speed_control_mode(fsm_cb_t *obj) {
  *
  * TODO: Implement position control logic
  */
+ #define POS_PID_LIMIT_MAX (600.0f)
 fsm_rt_t motor_position_control_mode(fsm_cb_t *obj)
 {
   const struct device *motor = obj->p1;
@@ -240,8 +241,8 @@ fsm_rt_t motor_position_control_mode(fsm_cb_t *obj)
     LOG_INF("Enter %s pos mode", obj->name);
     pid_init(&(f_data->id_pid), 0.08f, 0.006f, 0.5f, 12.0f, -12.0f);//0.076000  0.080000
     pid_init(&(f_data->iq_pid), 0.08f, 0.006f, 0.5f, 12.0f, -12.0f);
-    pid_init(&(f_data->speed_pid), 0.0085f, 0.00135f, 0.5f, 48.0f, -48.0f);
-    pid_init(&(f_data->pos_pid), 80.0f, 0.0005f, 0.50f, 400.0f, -400.0f);
+    pid_init(&(f_data->speed_pid), 0.0125f, 0.0083f, 0.5f, 48.0f, -48.0f);
+    pid_init(&(f_data->pos_pid), 5.0f, 0.0001f, 0.50f, POS_PID_LIMIT_MAX, -POS_PID_LIMIT_MAX);
     motor_start(motor);
     obj->chState = MOTOR_STATE_IDLE;
     break;
@@ -274,7 +275,7 @@ fsm_rt_t motor_position_control_mode(fsm_cb_t *obj)
     float *param = (float *)obj->p2;
     kp = param[0];
     ki = param[1];
-    pid_init(&(f_data->pos_pid), kp, ki, 0.50f, 400.0f, -400.0f);
+    pid_init(&(f_data->pos_pid), kp, ki, 0.80f, POS_PID_LIMIT_MAX, -POS_PID_LIMIT_MAX);
     LOG_INF("pid param %f,%f", (double)kp, (double)ki);
     param[0] = 0.0f;
     param[1] = 0.0f;
