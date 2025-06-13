@@ -19,5 +19,6 @@ zephyr_library_sources(ProtocolV4/uavcan/libcanard/libcanard/canard.c)
 zephyr_library_sources(CommonLibrary/statemachine/statemachine.c)
 zephyr_library_sources(CommonLibrary/algorithmlib/pid.c)
 zephyr_library_sources(CommonLibrary/algorithmlib/filter.c)
+zephyr_library_sources(CommonLibrary/algorithmlib/s_posi_planning.c)
 
 target_sources(app PRIVATE modulestest/main.c)

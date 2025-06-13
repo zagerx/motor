@@ -21,9 +21,10 @@
 #include <lib/bldcmotor/motor_internal.h>
 #include <lib/foc/foc.h> //TODO
 #include <statemachine/statemachine.h>
+#include <stdint.h>
 #include <zephyr/logging/log.h>
 #include "stm32h7xx_ll_gpio.h"
-
+#include <algorithmlib/s_posi_planning.h>
 /* Module logging setup */
 LOG_MODULE_REGISTER(motor_mode, LOG_LEVEL_DBG);
 
@@ -220,7 +221,7 @@ fsm_rt_t motor_speed_control_mode(fsm_cb_t *obj) {
  *
  * TODO: Implement position control logic
  */
- #define POS_PID_LIMIT_MAX (600.0f)
+ #define POS_PID_LIMIT_MAX (2000.0f)
 fsm_rt_t motor_position_control_mode(fsm_cb_t *obj)
 {
   const struct device *motor = obj->p1;
@@ -229,12 +230,17 @@ fsm_rt_t motor_position_control_mode(fsm_cb_t *obj)
   const struct device *foc =
       ((const struct motor_config *)motor->config)->foc_dev;
   struct foc_data *f_data = foc->data;
-
+  SPosPlanner *planner = &(f_data->s_pos_ph);
   const struct device *feedback = ((const struct motor_config *)motor->config)->feedback;
 
   float bus_vol = currsmp_get_busvol();
+
   foc_write_data(foc, FOC_PARAM_BUSVOL, &bus_vol);
   statemachine_updatestatus(obj, obj->sig);
+  if(bus_vol<45.0f)
+  {
+    obj->chState = MOTOR_STATE_FAULT;
+  }
   switch (obj->chState) {
   case ENTER:
     m_data->mode = MOTOR_MODE_POSI;
@@ -243,6 +249,7 @@ fsm_rt_t motor_position_control_mode(fsm_cb_t *obj)
     pid_init(&(f_data->iq_pid), 0.08f, 0.006f, 0.5f, 12.0f, -12.0f);
     pid_init(&(f_data->speed_pid), 0.0125f, 0.0083f, 0.5f, 48.0f, -48.0f);
     pid_init(&(f_data->pos_pid), 5.0f, 0.0001f, 0.50f, POS_PID_LIMIT_MAX, -POS_PID_LIMIT_MAX);
+    s_pos_planner_init(planner, 1400.0f, 3000.0f, 15000.0f);
     motor_start(motor);
     obj->chState = MOTOR_STATE_IDLE;
     break;
@@ -262,6 +269,12 @@ fsm_rt_t motor_position_control_mode(fsm_cb_t *obj)
     float cur_speed;
     cur_speed = f_data->speed_real;
     float cur_pos = f_data->pos_real;
+    static int8_t temp_cont = 0;
+    if(temp_cont++>10)
+    {
+      temp_cont = 0;
+      f_data->pos_ref = s_pos_update(planner,0.01f);
+    }
     f_data->speed_ref =  pid_contrl(&f_data->pos_pid,f_data->pos_ref,cur_pos);
     f_data->id_ref = 0.0f;
     f_data->iq_ref = pid_contrl(&f_data->speed_pid, f_data->speed_ref, cur_speed);
@@ -299,7 +312,10 @@ fsm_rt_t motor_position_control_mode(fsm_cb_t *obj)
     motor_set_threephase_disable(motor);
     obj->chState = MOTOR_STATE_IDLE;
     break;
-
+  case MOTOR_STATE_FAULT:
+    motor_set_threephase_disable(motor);
+    m_data->statue = MOTOR_STATE_FAULT;
+    break;
   case EXIT:
     LOG_INF("Exit pos mode");
     motor_set_threephase_disable(motor);

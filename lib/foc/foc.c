@@ -61,7 +61,8 @@ static void _write(const struct device* dev,int16_t flag,float *input)
         {
             float posi_ref;
             posi_ref = input[0];
-            data->pos_ref = posi_ref;
+            s_pos_planning(&data->s_pos_ph, 0.0f, posi_ref, 3.0f);
+            // data->pos_ref = posi_ref;
         }
         break;
 

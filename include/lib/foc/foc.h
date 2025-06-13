@@ -11,7 +11,7 @@
 #include <sys/types.h>
 #include <algorithmlib/filter.h>
 #include <lib/focutils/utils/deadtime_comp.h>
-
+#include <algorithmlib/s_posi_planning.h>
 enum FOC_DATA_INDEX{
     FOC_PARAM_D_PID = 0,
     FOC_PARAM_Q_PID,
@@ -48,6 +48,7 @@ typedef struct {
     float speed_ref;
     float speed_real;
     float pos_real,pos_ref,pos_pre;
+    SPosPlanner s_pos_ph;
     lowfilter_t speed_filter;
 	modulation_ctrl_t modulation;
     /** 新增字段 - 电流信息 */
