@@ -20,6 +20,7 @@ uavcan协议的接口文件
 #include <custom_data_types/dinosaurs/actuator/wheel_motor/PidParameter_1_0.h>
 #include <custom_data_types/dinosaurs/PortId_1_0.h>
 #include <custom_data_types/dinosaurs/actuator/wheel_motor/SetMode_2_0.h>
+#include <custom_data_types/dinosaurs/peripheral/OperateRemoteDevice_1_0.h>
 
 LOG_MODULE_REGISTER(canard_if, LOG_LEVEL_INF);
 
@@ -39,6 +40,8 @@ static void handle_motor_enable(CanardRxTransfer* transfer);
 static void handle_set_targe(CanardRxTransfer* transfer);
 static void handle_pid_parameter(CanardRxTransfer* transfer);
 static void handle_set_mode(CanardRxTransfer* transfer);
+static void handle_operate_remote_device(CanardRxTransfer* transfer); // 新增操作远程设备回调
+
 typedef void (*canard_subscription_callback_t)(CanardRxTransfer*);
 
 
@@ -205,9 +208,69 @@ static void subscribe_services(void)
                      CANARD_DEFAULT_TRANSFER_ID_TIMEOUT_USEC,
                      &sub_mode);
     sub_mode.user_reference = (void*)handle_set_mode;
+
+    static CanardRxSubscription sub_remote_device;
+    canardRxSubscribe(&canard,
+                     CanardTransferKindRequest,
+                     121, // 为OperateRemoteDevice分配端口ID
+                     custom_data_types_dinosaurs_peripheral_OperateRemoteDevice_Request_1_0_EXTENT_BYTES_,
+                     CANARD_DEFAULT_TRANSFER_ID_TIMEOUT_USEC,
+                     &sub_remote_device);
+    sub_remote_device.user_reference = (void*)handle_operate_remote_device;
+
 }
 #include <lib/bldcmotor/motor.h>
+extern uint8_t conctrl_cmd;
+ // 远程设备操作处理函数
+ static void handle_operate_remote_device(CanardRxTransfer* transfer)
+ {
+     custom_data_types_dinosaurs_peripheral_OperateRemoteDevice_Request_1_0 req = {0};
+     size_t inout_size = transfer->payload_size;
+     if (custom_data_types_dinosaurs_peripheral_OperateRemoteDevice_Request_1_0_deserialize_(
+         &req, transfer->payload, &inout_size) >= 0) 
+     {
+         // 转换设备名和参数为字符串
+         char device_name[32] = {0};
+         char device_param[32] = {0};
+         memcpy(device_name, req.name.elements, req.name.count);
+         memcpy(device_param, req.param.elements, req.param.count);
+         
+         LOG_INF("Remote device operation: method=%u, name='%s', param='%s'", 
+                req.method, device_name, device_param);
 
+        if(req.method == custom_data_types_dinosaurs_peripheral_OperateRemoteDevice_Request_1_0_OPEN)
+        {
+            conctrl_cmd = 1; 
+        }else if(req.method == custom_data_types_dinosaurs_peripheral_OperateRemoteDevice_Request_1_0_CLOSE){
+            conctrl_cmd = 2;
+        }else{
+
+        }
+         
+         // 准备响应
+         custom_data_types_dinosaurs_peripheral_OperateRemoteDevice_Response_1_0 resp = {
+             .result = custom_data_types_dinosaurs_peripheral_OperateRemoteDevice_Response_1_0_SUCESS
+         };
+         
+         // 可选: 填充返回值
+         resp.value.count = snprintf((char*)resp.value.elements, sizeof(resp.value.elements), 
+                                   "Operation %s executed", device_name);
+         
+         uint8_t buffer[64];
+         size_t buffer_size = sizeof(buffer);
+         custom_data_types_dinosaurs_peripheral_OperateRemoteDevice_Response_1_0_serialize_(
+             &resp, buffer, &buffer_size);
+         
+         const CanardTransferMetadata meta = {
+             .priority = CanardPriorityNominal,
+             .transfer_kind = CanardTransferKindResponse,
+             .port_id = transfer->metadata.port_id,
+             .remote_node_id = transfer->metadata.remote_node_id,
+             .transfer_id = transfer->metadata.transfer_id
+         };
+         canardTxPush(&txQueue, &canard, 0, &meta, buffer_size, buffer);
+     }
+ }
 static void handle_set_mode(CanardRxTransfer* transfer) {
     custom_data_types_dinosaurs_actuator_wheel_motor_SetMode_Request_2_0 req = {0};
     size_t inout_size = transfer->payload_size;

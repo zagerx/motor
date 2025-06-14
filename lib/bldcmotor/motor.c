@@ -231,7 +231,7 @@ static int motor_init(const struct device *dev)
     LOG_INF("foc_init name: %s", dev->name);   
    
     /* Initialize state machine */
-    statemachine_init(cfg->fsm, dev->name, motor_torque_control_mode, (void *)dev,motor_state_map,ARRAY_SIZE(motor_state_map));
+    statemachine_init(cfg->fsm, dev->name, motor_position_control_mode, (void *)dev,motor_state_map,ARRAY_SIZE(motor_state_map));
     return 0;
 }
 

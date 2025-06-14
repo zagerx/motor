@@ -43,6 +43,10 @@
 			gpios = <&gpioe 7 GPIO_ACTIVE_HIGH>;
 			label = "User LD4";
 		};				
+		proximity_switch:led_4{
+			gpios = <&gpiod 11 GPIO_ACTIVE_HIGH>;
+			label = "User LD5";
+		};
 	};
 
 	aliases {

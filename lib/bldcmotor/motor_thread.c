@@ -11,11 +11,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
- #include <zephyr/kernel.h>
+ #include <stdint.h>
+#include <zephyr/kernel.h>
+#include "statemachine/statemachine.h"
  #include "zephyr/device.h"
  #include <zephyr/drivers/gpio.h>
  #include <zephyr/logging/log.h>
- 
+ #include <lib/bldcmotor/motor.h>
  /* Module logging setup */
  LOG_MODULE_REGISTER(motor_thread, LOG_LEVEL_DBG);
  
@@ -27,13 +29,17 @@
  #define MOT12_BRK_PIN_NODE DT_NODELABEL(mot12_brk_pin)
  #define ENCODER_VCC DT_NODELABEL(encoder_vcc)
  #define W_DOG DT_NODELABEL(wdog)
- 
+ #define P_SWITCH DT_NODELABEL(proximity_switch)
  /* GPIO device specification */
  const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
  
  /* External motor control function */
  extern void motor_task(void *obj);
- 
+ void super_elevator_task(void* obj);
+ extern fsm_rt_t motor_torque_control_mode(fsm_cb_t *obj);
+ extern fsm_rt_t motor_speed_control_mode(fsm_cb_t *obj);
+ extern fsm_rt_t motor_position_control_mode(fsm_cb_t *obj);
+  
  /**
   * @struct motor_thread_data
   * @brief Motor thread control structure
@@ -88,6 +94,15 @@
      if (ret < 0) {
          LOG_ERR("Failed to configure encoder power (err %d)", ret);
      }
+
+     const struct gpio_dt_spec prx_switch = GPIO_DT_SPEC_GET(P_SWITCH, gpios);
+     ret = gpio_pin_configure_dt(&prx_switch, GPIO_INPUT);
+     if (ret < 0) {
+        LOG_ERR("Failed to configure proximity switch (err %d)", ret);
+     } else {
+        LOG_INF("Proximity switch configured");
+     }
+          
  #endif
  
      /* Initial delay for hardware stabilization */
@@ -101,6 +116,7 @@
  #endif
          /* Run motor control tasks */
          motor_task(NULL);
+         super_elevator_task(NULL);
          k_msleep(1);
      }
  }
@@ -126,3 +142,124 @@
                     0,
                     K_NO_WAIT);
  }
+ 
+static fsm_cb_t elevator_handle;
+uint8_t conctrl_cmd = 0;
+void super_elevator_task(void* obj)
+{
+    enum{
+        ELEVATOR_INIT = USER_STATUS,
+        ELEVATOR_FINDZERO,
+        ELEVATOR_ZERO,
+        ELEVATOR_TEMP0,
+        ELEVATOR_TEMP1,
+        ELEVATOR_ISZERO,
+        ELEVATOR_END,
+        ELEVATOR_MID,
+
+    };
+    fsm_cb_t* elevator_fsm = &elevator_handle;
+    const struct gpio_dt_spec prx_switch = GPIO_DT_SPEC_GET(P_SWITCH, gpios);
+
+    const struct device *motor = (DEVICE_DT_GET(DT_NODELABEL(motor0)));
+    struct motor_data *data;
+    // const struct motor_config *cfg = motor->config;
+    data = motor->data;
+
+    int switch_state;
+    switch_state = gpio_pin_get_dt(&prx_switch);
+    elevator_fsm->p1 = (void *)motor;
+    switch (elevator_fsm->chState) {
+        case ENTER:
+
+        case ELEVATOR_INIT:
+            {
+                
+                if (switch_state < 0) {
+                    // elevator_fsm->chState = ELEVATOR_ZERO;
+                    LOG_WRN("Failed to read proximity switch");
+                } else {//电机正转 找零点
+                    if(switch_state == 0)
+                    {
+                        if(data->mode != MOTOR_MODE_SPEED)
+                        {
+                            motor_cmd_set(MOTOR_CMD_SET_SPEED_MODE ,NULL,0);
+                        }
+                        if(data->mode == MOTOR_MODE_SPEED)
+                        {
+                            motor_cmd_set(MOTOR_CMD_SET_ENABLE,NULL,0);
+                            elevator_fsm->chState = ELEVATOR_FINDZERO; 
+                        }
+                    }else{
+                        elevator_fsm->chState = ELEVATOR_ZERO;
+                    }
+                    LOG_DBG("Proximity switch state: %d", switch_state);
+                }
+            }
+        break;
+        case ELEVATOR_FINDZERO:
+            {
+                float speed = 150.0f;
+                motor_cmd_set(MOTOR_CMD_SET_SPEED,&speed,1);
+                if(switch_state == 1)
+                {
+                    motor_cmd_set(MOTOR_CMD_SET_POSTION_MODE ,NULL,0);
+                    elevator_fsm->chState = ELEVATOR_ZERO;
+                }
+            }
+        break;
+        case ELEVATOR_ZERO :
+            {
+                if(conctrl_cmd == 2){//开始升起
+                    motor_cmd_set(MOTOR_CMD_SET_ENABLE,NULL,0);
+                    elevator_fsm->chState = ELEVATOR_TEMP0;
+                    conctrl_cmd = 255;                    
+                }
+            }
+            break;
+        case ELEVATOR_TEMP0:
+                {
+                    float posi = -4000.0f;
+                    motor_cmd_set(MOTOR_CMD_SET_SPEED,&posi,1);
+                    elevator_fsm->chState = ELEVATOR_END;
+                }
+            break;
+        case ELEVATOR_MID:
+            //读取当前位置
+
+            //如果到达终点
+            // elevator_fsm->chState = ELEVATOR_END;
+            //如果到达零点
+            // elevator_fsm->chState = ELEVATOR_ZERO
+
+            //根据实际情况，是否需要失能电机及落下报闸
+            break;
+        case ELEVATOR_END:
+            {
+                if(conctrl_cmd == 1){//回零点
+                   //设置目标位置 
+                   conctrl_cmd = 255;
+                   motor_cmd_set(MOTOR_CMD_SET_ENABLE,NULL,0);
+                   elevator_fsm->chState = ELEVATOR_TEMP1;
+                }
+            }
+            break;
+        case ELEVATOR_TEMP1:
+        {
+            float posi = 4000.0f;
+            motor_cmd_set(MOTOR_CMD_SET_SPEED,&posi,1);
+            elevator_fsm->chState = ELEVATOR_ISZERO;
+        }
+        break;
+        case ELEVATOR_ISZERO:
+            if(switch_state == 1)
+            {
+                motor_cmd_set(MOTOR_CMD_SET_DISABLE,NULL,0);
+                elevator_fsm->chState = ELEVATOR_ZERO;
+            }
+        break;
+        case EXIT:
+        break;
+    }    
+
+}

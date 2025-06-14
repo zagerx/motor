@@ -419,7 +419,6 @@ static void abz_stm32_set_total_distance(const struct device *dev)
  {
      abz_stm32_init(dev);
      hall_stm32_init(dev);
-    //  abz_hall_stm32_enable(dev);
      LOG_INF("stm32_abz_hall_init Finish");
      return 0;
  }
