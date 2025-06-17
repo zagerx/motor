@@ -34,7 +34,7 @@
   void motor_start(const struct device *dev)
   {
     if (!device_is_ready(dev)) {
-      LOG_ERR("PWM motor1 device not ready");
+      LOG_ERR("motor_start: device not ready");
       return;
     }
     
@@ -58,7 +58,7 @@
   void motor_stop(const struct device *dev)
   {
     if (!device_is_ready(dev)) {
-      LOG_ERR("PWM motor1 device not ready");
+      LOG_ERR("motor_stop: device not ready");
       return;
     }
     
@@ -78,7 +78,7 @@
   void motor_set_threephase_disable(const struct device *dev)
   {
    if (!device_is_ready(dev)) {
-     LOG_ERR("PWM motor1 device not ready");
+     LOG_ERR("motor_set_threephase_disable: device not ready");
      return;
    }
    const struct motor_config *cfg = dev->config;
@@ -97,7 +97,7 @@
   void motor_set_threephase_enable(const struct device *dev)
   {
    if (!device_is_ready(dev)) {
-     LOG_ERR("PWM motor1 device not ready");
+     LOG_ERR("motor_set_threephase_enable: device not ready");
      return;
    }
    const struct motor_config *cfg = dev->config;

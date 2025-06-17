@@ -54,6 +54,8 @@ static struct state_transition_map motor_state_map[] = {
   {.signal = MOTOR_CMD_SET_DISABLE,    .target_state = MOTOR_STATE_STOP},
   {.signal = MOTOR_CMD_SET_PIDPARAM,   .target_state = MOTOR_STATE_PARAM_UPDATE},
   {.signal = MOTOR_CMD_SET_SPEED,      .target_state = MOTOR_STATE_CLOSED_LOOP},
+  {.signal = MOTOR_CMD_SET_START,      .target_state = MOTOR_STATE_CLOSED_LOOP},
+
 };
 /**
  * @brief Set motor operating mode
@@ -211,6 +213,60 @@ static void foc_curr_regulator(void *ctx)
     pwm_set_phase_voltages(cfg->pwm, svm->duties.a, svm->duties.b, svm->duties.c);
 }
 
+void motor_set_mode(const struct device* motor,enum motor_mode mode)
+{
+  const struct motor_config* mcfg = motor->config;
+  fsm_cb_t* mfsm = mcfg->fsm;
+  if(mode == MOTOR_MODE_TORQUE)
+  {
+    TRAN_STATE(mfsm, motor_torque_control_mode);
+  }else if(mode == MOTOR_MODE_SPEED){
+    TRAN_STATE(mfsm, motor_speed_control_mode);
+  }else if(mode == MOTOR_MODE_POSI){
+    TRAN_STATE(mfsm, motor_position_control_mode);
+  }
+}
+
+enum motor_mode motor_get_mode(const struct device* motor)
+{
+  const struct motor_data *mdata = motor->data;
+  return mdata->mode; 
+}
+
+void motor_set_state(const struct device* motor,enum motor_cmd sig)
+{
+  struct motor_config* mcfg = (struct motor_config*)motor->config;
+  statemachine_setsig((fsm_cb_t*)mcfg->fsm,sig);
+}
+
+enum motor_state motor_get_state(const struct device *motor)
+{
+  const struct motor_data *mdata = motor->data;
+  return mdata->statue;
+}
+
+void motor_set_target(const struct device* motor,float target)
+{
+  const struct motor_data *mdata = motor->data;
+  const struct motor_config *mcfg = motor->config;
+  const struct device *devfoc = mcfg->foc_dev;
+  if(mdata->mode == MOTOR_MODE_SPEED){
+    foc_write_data(devfoc,FOC_PARAM_SPEED_REF,(float *)&target);                
+  }else if(mdata->mode == MOTOR_MODE_TORQUE){
+    foc_write_data(devfoc,FOC_PARAM_DQ_REF,(float *)&target);
+  }else if(mdata->mode == MOTOR_MODE_POSI){
+    // foc_write_data(devfoc, FOC_PARAM_POSI_REF,(float *)&target);
+    foc_write_data(devfoc, FOC_PARAM_POSI_PLANNING,(float *)&target);
+  }
+}
+
+float motor_get_curposi(const struct device* motor)
+{
+  const struct motor_config *mcfg = motor->config;
+  const struct device *devfoc = mcfg->foc_dev;  
+  const struct foc_data *fdata = devfoc->data;
+  return fdata->pos_real;
+}
 /**
  * @brief Motor device initialization
 
@@ -232,6 +288,7 @@ static int motor_init(const struct device *dev)
    
     /* Initialize state machine */
     statemachine_init(cfg->fsm, dev->name, motor_position_control_mode, (void *)dev,motor_state_map,ARRAY_SIZE(motor_state_map));
+    // motor_set_mode(dev, MOTOR_MODE_POSI);
     return 0;
 }
 

@@ -18,7 +18,7 @@ enum FOC_DATA_INDEX{
     FOC_PARAM_DQ_REF,
     FOC_PARAM_SPEED_REF,
     FOC_PARAM_POSI_REF,
-
+    FOC_PARAM_POSI_PLANNING,
     FOC_PARAM_DQ_REAL,
     FOC_PARAM_SPEED_REAL,
     FOC_PARAM_ME_ANGLE_REAL,
@@ -47,7 +47,7 @@ typedef struct {
     float id_ref,iq_ref;
     float speed_ref;
     float speed_real;
-    float pos_real,pos_ref,pos_pre;
+    float pos_real,pos_ref,pos_pre,pos_splanning_targe;
     SPosPlanner s_pos_ph;
     lowfilter_t speed_filter;
 	modulation_ctrl_t modulation;

@@ -65,7 +65,15 @@ static void _write(const struct device* dev,int16_t flag,float *input)
             // data->pos_ref = posi_ref;
         }
         break;
-
+        case FOC_PARAM_POSI_PLANNING:
+        {
+            float posi_ref;
+            posi_ref = input[0];
+            data->pos_splanning_targe = posi_ref;
+            // s_pos_planning(&data->s_pos_ph, 0.0f, posi_ref, 3.0f);
+            // data->pos_ref = posi_ref;
+        }
+        break;
         case FOC_PARAM_DQ_REAL:
             {
                 data->i_d = input[0];

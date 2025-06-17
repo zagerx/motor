@@ -157,8 +157,11 @@ fsm_rt_t motor_speed_control_mode(fsm_cb_t *obj) {
     LOG_INF("motor status: MOTOR_STATE_INIT");
     motor_set_threephase_enable(motor);
     f_data->speed_ref = 0.0f;
-    obj->chState = MOTOR_STATE_IDLE;
-    break;
+    obj->chState = MOTOR_STATE_READY;
+    // break;
+    case MOTOR_STATE_READY:
+    m_data->statue = MOTOR_STATE_READY;
+    break;    
     /*---------RUNING-------------*/
   case MOTOR_STATE_CLOSED_LOOP: // Runing
     m_data->statue = MOTOR_STATE_CLOSED_LOOP;
@@ -237,10 +240,10 @@ fsm_rt_t motor_position_control_mode(fsm_cb_t *obj)
 
   foc_write_data(foc, FOC_PARAM_BUSVOL, &bus_vol);
   statemachine_updatestatus(obj, obj->sig);
-  if(bus_vol<45.0f)
-  {
-    obj->chState = MOTOR_STATE_FAULT;
-  }
+  // if(bus_vol<45.0f)
+  // {
+  //   obj->chState = MOTOR_STATE_FAULT;
+  // }
   switch (obj->chState) {
   case ENTER:
     m_data->mode = MOTOR_MODE_POSI;
@@ -261,7 +264,11 @@ fsm_rt_t motor_position_control_mode(fsm_cb_t *obj)
     f_data->speed_ref = 0.0f;
     f_data->pos_ref = 0.0f;
     feedback_set_pos(feedback);
-    obj->chState = MOTOR_STATE_IDLE;
+    s_pos_planning(planner, 0.0f, f_data->pos_splanning_targe, 3.0f);
+    obj->chState = MOTOR_STATE_READY;
+    // break;
+  case MOTOR_STATE_READY:
+    m_data->statue = MOTOR_STATE_READY;
     break;
     /*---------RUNING-------------*/
   case MOTOR_STATE_CLOSED_LOOP: // Runing
@@ -270,10 +277,10 @@ fsm_rt_t motor_position_control_mode(fsm_cb_t *obj)
     cur_speed = f_data->speed_real;
     float cur_pos = f_data->pos_real;
     static int8_t temp_cont = 0;
-    if(temp_cont++>10)
+    if(temp_cont++>4)
     {
       temp_cont = 0;
-      f_data->pos_ref = s_pos_update(planner,0.01f);
+      f_data->pos_ref = s_pos_update(planner,0.005f);
     }
     f_data->speed_ref =  pid_contrl(&f_data->pos_pid,f_data->pos_ref,cur_pos);
     f_data->id_ref = 0.0f;
