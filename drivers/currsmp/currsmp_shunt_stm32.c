@@ -4,6 +4,7 @@
  */
 
  #include "stm32h7xx_ll_adc.h"
+#include <math.h>
 #include <stdint.h>
 #include <sys/_intsup.h>
 #include <zephyr/logging/log.h>
@@ -123,11 +124,24 @@
     curr->i_b = ((int16_t)(data->adc_channl_b - 2048)) * scale;
     curr->i_c = ((int16_t)(data->adc_channl_c - 2048)) * scale;
  }
+ static void currsmp_shunt_stm32_get_bus_vol_curr(const struct device* dev,float *bus_vol,float *bus_curr)
+ {
+     LL_ADC_REG_StartConversion(ADC1);
+     while(!LL_ADC_IsActiveFlag_EOC(ADC1));
+     uint32_t ch14_value = LL_ADC_REG_ReadConversionData16(ADC1);
+     *bus_vol = ch14_value*0.01632f;// (3.3f/4096*ch14_value)*(100.0f/(104.7f));
  
+     LL_ADC_REG_StartConversion(ADC2);
+     while(!LL_ADC_IsActiveFlag_EOC(ADC2));
+     uint32_t ch4_value = LL_ADC_REG_ReadConversionData16(ADC2);
+     *bus_curr =  ch4_value*0.01632f;// (3.3f/4096*ch14_value)*(100.0f/(104.7f));         
+ }
+  
  /** @brief STM32 Shunt Current Sampling Driver API. */
  static const struct currsmp_driver_api currsmp_shunt_stm32_driver_api = {
      .configure = currsmp_shunt_stm32_configure,
      .get_currents = currsmp_shunt_stm32_get_currents,
+     .get_bus_volcurr = currsmp_shunt_stm32_get_bus_vol_curr,
  };
  
  /** @brief Initialization function for STM32 shunt current sampling driver.
@@ -219,10 +233,10 @@
          LL_ADC_SetChannelPreselection(cfg->adc,LL_ADC_CHANNEL_16);
          LL_ADC_SetChannelPreselection(cfg->adc,LL_ADC_CHANNEL_17);        
      }else{
-         LL_ADC_REG_SetSequencerRanks(cfg->adc, LL_ADC_REG_RANK_1, LL_ADC_CHANNEL_3);
-         LL_ADC_SetChannelSamplingTime(cfg->adc, LL_ADC_CHANNEL_3, LL_ADC_SAMPLINGTIME_1CYCLE_5);
-         LL_ADC_SetChannelSingleDiff(cfg->adc, LL_ADC_CHANNEL_3, LL_ADC_SINGLE_ENDED);
-         LL_ADC_SetChannelPreselection(cfg->adc, LL_ADC_CHANNEL_3);    
+         LL_ADC_REG_SetSequencerRanks(cfg->adc, LL_ADC_REG_RANK_1, LL_ADC_CHANNEL_4);
+         LL_ADC_SetChannelSamplingTime(cfg->adc, LL_ADC_CHANNEL_4, LL_ADC_SAMPLINGTIME_1CYCLE_5);
+         LL_ADC_SetChannelSingleDiff(cfg->adc, LL_ADC_CHANNEL_4, LL_ADC_SINGLE_ENDED);
+         LL_ADC_SetChannelPreselection(cfg->adc, LL_ADC_CHANNEL_4);    
 
          LL_ADC_INJ_SetSequencerRanks(cfg->adc, LL_ADC_INJ_RANK_3, LL_ADC_CHANNEL_9);
          LL_ADC_SetChannelSamplingTime(cfg->adc, LL_ADC_CHANNEL_9, LL_ADC_SAMPLINGTIME_1CYCLE_5);

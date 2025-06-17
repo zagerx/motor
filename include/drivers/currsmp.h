@@ -39,6 +39,7 @@
                currsmp_regulation_cb_t regulation_cb, void *ctx);
      void (*get_currents)(const struct device *dev,
                   struct currsmp_curr *curr);
+     void (*get_bus_volcurr)(const struct device *dev,float* vol,float* curr);
  };
  
  /** @endcond */
@@ -75,6 +76,14 @@
      api->get_currents(dev, curr);
  }
  
+ static inline void currsmp_get_bus_vol_curr(const struct device *dev,
+    float *bus_vol,float *bus_curr)
+{
+const struct currsmp_driver_api *api = dev->api;
+api->get_bus_volcurr(dev, bus_vol,bus_curr);
+}
+
+
  float currsmp_get_busvol(void);
  
  /** @} */
