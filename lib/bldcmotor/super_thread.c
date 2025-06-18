@@ -239,7 +239,6 @@ void super_elevator_task(void* obj)
 
         case ELEVATOR_ISEND ://等待5s使其达到远端
             {
-
                 {
                     static uint16_t conut = 0;
                     conut++;
