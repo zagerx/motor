@@ -148,16 +148,17 @@ static fsm_cb_t elevator_handle = {
 };
 uint8_t conctrl_cmd = 0;
 #define  RISING_DIS 3000.f
+enum{
+    ELEVATOR_INIT = USER_STATUS,
+    ELEVATOR_FINDZERO,
+    ELEVATOR_ZERO,
+    ELEVATOR_ISZERO,
+    ELEVATOR_ISEND,
+    ELEVATOR_END,
+};
 void super_elevator_task(void* obj)
 {
-    enum{
-        ELEVATOR_INIT = USER_STATUS,
-        ELEVATOR_FINDZERO,
-        ELEVATOR_ZERO,
-        ELEVATOR_ISZERO,
-        ELEVATOR_ISEND,
-        ELEVATOR_END,
-    };
+
     fsm_cb_t* elevator_fsm = &elevator_handle;
     const struct gpio_dt_spec prx_switch = GPIO_DT_SPEC_GET(P_SWITCH, gpios);
 
@@ -264,16 +265,6 @@ void super_elevator_task(void* obj)
                 {
                     break;
                 }
-
-                //2、等待一段时间  1\2 选择一种
-                // static uint16_t conut = 0;
-                // if(conut++ <= 5999)
-                // {
-                //     break;
-                // }
-                // conut = 0;
-
-
                 if(motor_get_state(motor) != MOTOR_STATE_READY)
                 {
                     float posi = RISING_DIS + 50;
@@ -289,19 +280,45 @@ void super_elevator_task(void* obj)
 
         case ELEVATOR_ISZERO://是否回到零点
             switch_state = gpio_pin_get_dt(&prx_switch);
-            static uint16_t count = 0;
             if(switch_state != 1)
             {
                 break;
 
             }
-            // if(count++>5999)
-            {
-                count = 0;
-                elevator_fsm->chState = ELEVATOR_ZERO;
-            }
+            elevator_fsm->chState = ELEVATOR_ZERO;
             break;
         case EXIT:
             break;
     }
+}
+/**
+uint8 INIT = 0
+uint8 NOT_READY = 1
+uint8 UNLOCK = 2
+uint8 LOCKING = 3
+uint8 LOCK = 4
+uint8 UNLOCKING = 5
+uint8 INTERMEDIATE = 6
+uint8 EXCEPTION = 255
+*/
+int8_t super_elevator_state(void)
+{
+    int16_t state = 0;
+    if(elevator_handle.chState == ELEVATOR_INIT)
+    {
+        state = 0;
+    }else if(elevator_handle.chState == ELEVATOR_FINDZERO){
+        state = 1;
+    }else if(elevator_handle.chState == ELEVATOR_ZERO){
+        state = 2;
+    }else if(elevator_handle.chState == ELEVATOR_ISEND){
+        state = 3;
+    }else if(elevator_handle.chState == ELEVATOR_END){
+        state = 4;
+    }else if(elevator_handle.chState == ELEVATOR_ISZERO){
+        state = 5;
+    }else{//急停状态，后续补充
+
+    }
+    return state;
 }

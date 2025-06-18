@@ -12,6 +12,7 @@ uavcan协议的接口文件
 #include "canard.h"
 #include "zephyr/posix/sys/stat.h"
 #include "zephyr/sys/util.h"
+#include <stdint.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/drivers/can.h>
@@ -22,7 +23,7 @@ uavcan协议的接口文件
 #include <dinosaurs/actuator/wheel_motor/SetMode_2_0.h>
 #include <dinosaurs/peripheral/OperateRemoteDevice_1_0.h>
 #include <dinosaurs/peripheral/MovableAddons_1_0.h> // 添加头文件包含
-
+#include <dinosaurs/PortId_1_0.h>
 LOG_MODULE_REGISTER(canard_if, LOG_LEVEL_INF);
 
 #define CANARD_MEM_POOL_SIZE 4096
@@ -37,8 +38,8 @@ extern struct k_msgq rx_msgq;
 static uint8_t heartbeat_transfer_id = 0;
 static uint8_t movable_addons_transfer_id = 0;
 static uint64_t last_movable_pub = 0;
-static const uint16_t MOVABLE_ADDONS_PUB_INTERVAL_MS = 1000; // 1秒发布间隔
-static const CanardPortID MOVABLE_ADDONS_PORT_ID = 1201;     // 为MovableAddons分配的端口ID
+static const uint16_t MOVABLE_ADDONS_PUB_INTERVAL_MS = 100; // 1秒发布间隔
+static const CanardPortID MOVABLE_ADDONS_PORT_ID = 1022;     // 为MovableAddons分配的端口ID
 
 static void subscribe_services(void);
 static void handle_motor_enable(CanardRxTransfer* transfer);
@@ -113,7 +114,7 @@ void canard_publish_heartbeat(void)
     }}
 }
 
-void canard_publish_movable_addons(uint8_t device_id, const char* device_name, uint8_t state_value)
+void canard_publish_movable_addons(uint16_t device_id, const char* device_name, uint8_t state_value)
 {
     // 初始化MovableAddons消息
     dinosaurs_peripheral_MovableAddons_1_0 msg = {
@@ -158,10 +159,10 @@ void canard_publish_movable_addons(uint8_t device_id, const char* device_name, u
 }
 
 
+extern int8_t super_elevator_state(void);
 
 static void canard_thread(void *p1, void *p2, void *p3)
 {
-    // LOG_INF("canard_thread start");
     can_init();
     canard_if_init(NODE_ID);
     subscribe_services();  // 新增服务订阅
@@ -181,12 +182,10 @@ static void canard_thread(void *p1, void *p2, void *p3)
         if (k_uptime_get() - last_heartbeat > 1000) {
             canard_publish_heartbeat();
             last_heartbeat = k_uptime_get();
-        }   
+        }
+
         if (k_uptime_get() - last_movable_pub > MOVABLE_ADDONS_PUB_INTERVAL_MS) {
-            // 示例：发布两个设备的状态
-            canard_publish_movable_addons(1, "front_lock", 4); // LOCK状态
-            canard_publish_movable_addons(2, "rear_lock", 2);  // UNLOCK状态
-            
+            canard_publish_movable_addons(1, "ieb_motor_lift", super_elevator_state()); // LOCK状态
             last_movable_pub = k_uptime_get();
         }        
         // 新增接收处理
@@ -292,15 +291,19 @@ extern uint8_t conctrl_cmd;
          
          LOG_INF("Remote device operation: method=%u, name='%s', param='%s'", 
                 req.method, device_name, device_param);
-
-        if(req.method == dinosaurs_peripheral_OperateRemoteDevice_Request_1_0_OPEN)
+        if(!strcmp(device_name,"ieb_motor_lift"))
         {
-            conctrl_cmd = 1; 
-        }else if(req.method == dinosaurs_peripheral_OperateRemoteDevice_Request_1_0_CLOSE){
-            conctrl_cmd = 2;
-        }else{
+            if(req.method == dinosaurs_peripheral_OperateRemoteDevice_Request_1_0_OPEN)
+            {
+                conctrl_cmd = 1; 
+            }else if(req.method == dinosaurs_peripheral_OperateRemoteDevice_Request_1_0_CLOSE){
+                conctrl_cmd = 2;
+            }else{
+    
+            }
+        }else if(!strcmp(device_name,"m-brake")){
 
-        }
+        }else{}                
          
          // 准备响应
          dinosaurs_peripheral_OperateRemoteDevice_Response_1_0 resp = {
