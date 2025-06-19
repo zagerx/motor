@@ -147,7 +147,7 @@ fsm_rt_t motor_speed_control_mode(fsm_cb_t *obj) {
     LOG_INF("Enter %s speed mode", obj->name);
     pid_init(&(f_data->id_pid), 0.08f, 0.006f, 0.5f, 12.0f, -12.0f);//0.076000  0.080000
     pid_init(&(f_data->iq_pid), 0.08f, 0.006f, 0.5f, 12.0f, -12.0f);
-    pid_init(&(f_data->speed_pid), 0.0085f, 0.00135f, 0.5f, 48.0f, -48.0f);
+    pid_init(&(f_data->speed_pid), 0.0048f, 0.01f, 0.5f, 48.0f, -48.0f);
     motor_start(motor);
     obj->chState = MOTOR_STATE_IDLE;
     break;
