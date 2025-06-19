@@ -147,7 +147,7 @@ static fsm_cb_t elevator_handle = {
     .chState = 0,
 };
 uint8_t conctrl_cmd = 0;
-#define  RISING_DIS 3000.f
+#define  RISING_DIS 3000.0f
 enum{
     ELEVATOR_INIT = USER_STATUS,
     ELEVATOR_FINDZERO,
@@ -228,7 +228,7 @@ void super_elevator_task(void* obj)
                 if(motor_get_state(motor) != MOTOR_STATE_READY)
                 {
                     float posi = -RISING_DIS;
-                    motor_set_target(motor,posi);                
+                    motor_set_target(motor,posi); 
                     motor_set_state(motor,MOTOR_CMD_SET_ENABLE);
                     break;
                 }

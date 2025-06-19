@@ -40,13 +40,13 @@
      float (*get_mangle)(const struct device *dev);
  
      /* Get  position. unit: rad. */
-     float (*get_position)(const struct device *dev);
+     float (*get_rel_odom)(const struct device *dev);
 
-     void (*set_toli_dis)(const struct device *dev);
+     void (*set_rel_odom)(const struct device *dev);
      /* feedback calibration */
      int (*calibration)(const struct device *dev);
 
-     void (*hall_start)(const struct device *dev);
+     void (*feedback_enable)(const struct device *dev);
  };
  
  /** @endcond */
@@ -55,7 +55,7 @@
  static inline void feedback_start(const struct device *dev)
  {
     const struct feedback_driver_api *api = dev->api;
-    api->hall_start(dev);
+    api->feedback_enable(dev);
     return;
  }
 
@@ -113,8 +113,8 @@
  {
      const struct feedback_driver_api *api = dev->api;
  
-     if (api->get_position) {
-         return api->get_position(dev);
+     if (api->get_rel_odom) {
+         return api->get_rel_odom(dev);
      }
  
      return 0.0f;
@@ -123,8 +123,8 @@
  {
      const struct feedback_driver_api *api = dev->api;
  
-     if (api->set_toli_dis) {
-        api->set_toli_dis(dev);
+     if (api->set_rel_odom) {
+        api->set_rel_odom(dev);
      }
  }
   

@@ -40,7 +40,7 @@ LOG_MODULE_REGISTER(motor, LOG_LEVEL_DBG);
 extern fsm_rt_t motor_torque_control_mode(fsm_cb_t *obj);
 extern fsm_rt_t motor_speed_control_mode(fsm_cb_t *obj);
 extern fsm_rt_t motor_position_control_mode(fsm_cb_t *obj);
-
+extern  fsm_rt_t motor_test_control_mode(fsm_cb_t *obj);
 /**
  * motor_state_map - Motor FSM signal-to-state transition mapping
  * @signal: Trigger signal
@@ -141,7 +141,7 @@ void motor_cmd_set(int16_t cmd,void *pdata,int8_t datalen)
           }
       }     
 }
-
+extern  void eloop_test(void *ctx);
 /**
  * @brief FOC current regulator callback
  * @param ctx Device context pointer
@@ -168,34 +168,27 @@ static void foc_curr_regulator(void *ctx)
     data->i_a = current_now.i_a;data->i_b = current_now.i_b;data->i_c = current_now.i_c;
     data->eangle = feedback_get_eangle(cfg->feedback);
     data->pos_real = feedback_get_position(cfg->feedback);
-    foc_speedexcu(foc,feedback_get_rads(cfg->feedback)*95493.0f*0.2f);
+    foc_calculate_speed(foc,feedback_get_rads(cfg->feedback)*95493.0f*0.2f);
 
     /* Generate test signals for open loop */
     float alph, beta, sin_the, cos_the;
-    sin_cos_f32(((data->eangle - _PI_2_) * 57.2957795131f), &sin_the, &cos_the);
+    sin_cos_f32(((data->eangle - 90.0f)), &sin_the, &cos_the);
     
-    float temp_ia,temp_ib;
-    temp_ia = current_now.i_a;
-    temp_ib = current_now.i_b;
-    clarke_f32(temp_ia,temp_ib,&(data->i_alpha),&(data->i_beta));
+    clarke_f32(current_now.i_a,current_now.i_b,&(data->i_alpha),&(data->i_beta));
     park_f32((data->i_alpha),(data->i_beta),&(data->i_d),&(data->i_q),sin_the,cos_the);
     
     /* Update rotor angle */
     float d_out,q_out;
     if(m_data->statue == MOTOR_STATE_CLOSED_LOOP)
     {
-      data->self_theta += 0.0008f;
-      if (data->self_theta > 6.28f) {
-          data->self_theta = 0.0f;
-      }      
       d_out = pid_contrl((pid_cb_t *)(&data->id_pid), 0.0f, data->i_d);
       // d_out = 0.0f;
       q_out = pid_contrl((pid_cb_t *)(&data->iq_pid), data->iq_ref, data->i_q);
       // q_out = data->iq_ref; 
+      // q_out = -0.02f;
       svm_apply_voltage_limiting(foc,&d_out, &q_out,data->bus_vol);
-      // sin_cos_f32(((data->self_theta) * 57.2957795131f), &sin_the, &cos_the);
 
-      sin_cos_f32(((data->eangle) * 57.2957795131f), &sin_the, &cos_the);
+      sin_cos_f32(((data->eangle)), &sin_the, &cos_the);
       inv_park_f32(d_out, q_out, &alph, &beta, sin_the, cos_the);
     }else if(m_data->statue == MOTOR_STATE_ALIGN){
       d_out = 0.0f;

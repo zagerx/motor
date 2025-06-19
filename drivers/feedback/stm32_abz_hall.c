@@ -8,6 +8,8 @@
  */
 
  #include "zephyr/device.h"
+#include "stm32h7xx_ll_tim.h"
+#include <sys/_intsup.h>
  #include <sys/_stdint.h>
  #define DT_DRV_COMPAT st_stm32_abz_hall
  
@@ -24,33 +26,25 @@
  #include <stm32_ll_tim.h>
  
  LOG_MODULE_REGISTER(abz_hall_stm32, LOG_LEVEL_DBG);
-//  #define SCETION_6_BASEANGLE             (0.3416f)
-//  #define SCETION_4_BASEANGLE             (1.4624f)
-//  #define SCETION_5_BASEANGLE             (2.4623f)
-//  #define SCETION_1_BASEANGLE             (3.6222f)
-//  #define SCETION_3_BASEANGLE             (4.5830f)
-//  #define SCETION_2_BASEANGLE             (5.5344f)
-#define _PI_2 -1.5707f
- #define SCETION_3_BASEANGLE             (2.8903f-_PI_2)
- #define SCETION_2_BASEANGLE             (3.9221f-_PI_2)
- #define SCETION_6_BASEANGLE             (4.9703f-_PI_2)
- #define SCETION_4_BASEANGLE             (6.0433f-_PI_2)
- #define SCETION_5_BASEANGLE             (0.7544f-_PI_2)
- #define SCETION_1_BASEANGLE             (1.7792f-_PI_2)
- #define HALL_POSITIVE_OFFSET            (0.0f)
- #define HALL_NEGATIVE_OFFSET            (0.0f)
 
- #define _2PI             6.2831852f
- #define PI               3.14159260f
+ #define SCETION_3_BASEANGLE             (286.00f)
+ #define SCETION_2_BASEANGLE             (346.00f)
+ #define SCETION_6_BASEANGLE             (046.00f)
+ #define SCETION_4_BASEANGLE             (106.00f)
+ #define SCETION_5_BASEANGLE             (166.00f)
+ #define SCETION_1_BASEANGLE             (226.00f)
 
- #define ABZ_ENCODER_LINES_HALF          (2500)
- #define ABZ_ENCODER_LINES               (5000)//编码器线数
- #define ABZ_ENCODER_RESOLUTION          (0.004f)//编码器分辨率 2*pi/5000
+ #define HALL_SENSOR_POSITIVE_OFFSET     (-30.0f)  /* 霍尔传感器正方向偏移量 (度) */
+ #define HALL_SENSOR_NEGATIVE_OFFSET     (0.0f)   /* 霍尔传感器负方向偏移量 (度) */
 
-static float _normalize_angle(float angle)
+ #define ABZ_ENCODER_LINES                  (4096)//编码器线数
+ #define ABZ_ENCODER_LINES_X2               (8192)
+ #define ABZ_ENCODER_RESOLUTION             (0.087890625f)
+
+static inline float _normalize_angle(float angle)
 {
-  float a = fmod(angle, _2PI);
-  return a >= 0 ? a : (a + 2.0f*PI);  
+  float a = fmodf(angle, 360.0f);
+  return a >= 0 ? a : (a + 360.0f);  
 }
  /* Driver configuration structure */
  struct abz_hall_stm32_config {
@@ -65,25 +59,15 @@ static float _normalize_angle(float angle)
  };
  
  /* Driver runtime data */
- typedef struct _sect
- {
-     /* data */
-     uint8_t last_sect;
-     uint8_t next_sect;
-     float angle;
-     float diff;
- }sect_t;
- 
  struct hall_data_t{
+    uint8_t cur_sect;
     uint8_t pre_sect;
-    uint8_t err_count;
-    float base_angle[6];
-    float realcacle_angle;
-    float pre_angle;
-    float speed;
-    float total_distance;
-    sect_t positive_sect[7];
-    sect_t negative_sect[7];    
+    float base_angle[7];
+    float eangle;
+    float eomega;
+    float rel_odom;
+    int8_t dir;
+
  };
  struct abz_hall_stm32_data {
      int overflow;                       /* Timer overflow count */
@@ -91,22 +75,20 @@ static float _normalize_angle(float angle)
      float eangle_ratio;                 /* Electrical angle ratio */
      struct gpio_callback gpio_cb;       /* GPIO callback */
      const struct device *dev;           /* Device instance */
-     uint8_t cur_sect;                   /* Current hall sector */
-     uint8_t pre_sect;                   /* Previous hall sector */
      struct hall_data_t hall;
  };
  static void hall_angleupdate(const void* obj,uint8_t cur_sect) 
  {
     struct hall_data_t* hall = (struct hall_data_t*)obj;
-    sect_t *psect;
+    hall->cur_sect = cur_sect;
     switch(hall->pre_sect)
     {
     /****************************SECTION 6***********************************/    
         case 6:
             if(cur_sect == 4) {//正转
-                psect = (sect_t *)hall->positive_sect;
+                hall->dir = 1;
             }else if(cur_sect == 2){//
-                psect = (sect_t *)hall->negative_sect;
+                hall->dir = -1;
             }else if (cur_sect == 6) {//仍在当前扇区
              
             }else{
@@ -116,9 +98,9 @@ static float _normalize_angle(float angle)
     /****************************SECTION 4***********************************/    
         case 4:
             if(cur_sect == 5) {//正转
-                psect = (sect_t *)hall->positive_sect;
+                hall->dir = 1;
             }else if(cur_sect == 6){//
-                psect = (sect_t *)hall->negative_sect;
+                hall->dir = -1;
             }else if (cur_sect == 4) {//仍在当前扇区
              
             }else{
@@ -128,9 +110,9 @@ static float _normalize_angle(float angle)
     /****************************SECTION 5***********************************/    
         case 5:
             if(cur_sect == 1) {//正转
-                psect = (sect_t *)hall->positive_sect;
+                hall->dir = 1;
             }else if(cur_sect == 4){//
-                psect = (sect_t *)hall->negative_sect;
+                hall->dir = -1;
             }else if (cur_sect == 5) {//仍在当前扇区
             
             }else{
@@ -140,9 +122,9 @@ static float _normalize_angle(float angle)
     /****************************SECTION 1***********************************/    
         case 1:
             if(cur_sect == 3) {//正转
-                psect = (sect_t *)hall->positive_sect;
+                hall->dir = 1;
             }else if(cur_sect == 5){//
-                psect = (sect_t *)hall->negative_sect;
+                hall->dir = -1;
             }else if (cur_sect == 1) {//仍在当前扇区
              
             }else{
@@ -152,9 +134,9 @@ static float _normalize_angle(float angle)
     /****************************SECTION 3***********************************/    
         case 3:
             if(cur_sect == 2) {//正转
-                psect = (sect_t *)hall->positive_sect;
+                hall->dir = 1;
             }else if(cur_sect == 1){//
-                psect = (sect_t *)hall->negative_sect;
+                hall->dir = -1;
             }else if (cur_sect == 3) {//仍在当前扇区
             
             }else{
@@ -164,9 +146,9 @@ static float _normalize_angle(float angle)
     /****************************SECTION 2***********************************/    
         case 2:
             if(cur_sect == 6) {//正转
-                psect = (sect_t *)hall->positive_sect;
+                hall->dir = 1;
             }else if(cur_sect == 3){//
-                psect = (sect_t *)hall->negative_sect;
+                hall->dir = -1;
             }else if (cur_sect == 2) {//仍在当前扇区
             
             }else{
@@ -177,11 +159,16 @@ static float _normalize_angle(float angle)
         default:
         break;        
     }
-
+    float temp;
     // if(cur_sect == 6)
     {
-        hall->realcacle_angle = psect[cur_sect].angle;
-        // hall->realcacle_angle = _normalize_angle(hall->realcacle_angle)
+        if(hall->dir == 1)
+        {
+            temp =  hall->base_angle[cur_sect] + HALL_SENSOR_POSITIVE_OFFSET;//根据实际情况正转角度进行补偿
+            hall->eangle = temp;
+        }else if(hall->dir == -1){
+            hall->eangle = hall->base_angle[cur_sect] + HALL_SENSOR_NEGATIVE_OFFSET;
+        }
     }
     hall->pre_sect = cur_sect;
  }
@@ -193,21 +180,21 @@ static float _normalize_angle(float angle)
     const struct abz_hall_stm32_data *data = dev->data;
     struct hall_data_t* hall = (struct hall_data_t*)(&data->hall);
    
-     int32_t delt_cnt =  LL_TIM_GetCounter(cfg->timer) - ABZ_ENCODER_LINES_HALF;
-     LL_TIM_SetCounter(cfg->timer,ABZ_ENCODER_LINES_HALF);
-     float diff = (delt_cnt)*ABZ_ENCODER_RESOLUTION;
+    int32_t delt_cnt =  LL_TIM_GetCounter(cfg->timer) - ABZ_ENCODER_LINES;
+    LL_TIM_SetCounter(cfg->timer,ABZ_ENCODER_LINES);
+    float diff = (delt_cnt)*ABZ_ENCODER_RESOLUTION;
 
-     hall->realcacle_angle += diff;
-    hall->speed = (diff);
-    hall->total_distance += diff; 
-     hall->pre_angle = hall->realcacle_angle;
-     return hall->realcacle_angle;
+    hall->eangle += diff;
+    hall->eomega = (diff)/57.2957795131f;
+    hall->rel_odom += (diff/57.295779513f); 
+    hall->eangle = _normalize_angle(hall->eangle );
+    return hall->eangle;
  }
-static void abz_stm32_set_total_distance(const struct device *dev)
+static void abz_stm32_set_rel_odom(const struct device *dev)
 {
     const struct abz_hall_stm32_data *data = dev->data;
     struct hall_data_t* hall = (struct hall_data_t*)(&data->hall);
-    hall->total_distance = 0.0f;
+    hall->rel_odom = 0.0f;
 }
  static float abz_stm32_get_mangle(const struct device *dev)
  {
@@ -217,19 +204,38 @@ static void abz_stm32_set_total_distance(const struct device *dev)
  
  static float abz_stm32_get_rads(const struct device *dev)
  {
-     /* TODO: Implement speed calculation */
+     /* TODO: Implement eomega calculation */
     const struct abz_hall_stm32_data *data = dev->data;
     struct hall_data_t* hall = (struct hall_data_t*)(&data->hall);     
-    return hall->speed;
+    return hall->eomega;
  }
  
- static float abz_stm32_get_position(const struct device *dev)
+ static float abz_stm32_get_rel_odom(const struct device *dev)
  {
      /* TODO: Implement position calculation */
      const struct abz_hall_stm32_data *data = dev->data;
      struct hall_data_t* hall = (struct hall_data_t*)(&data->hall);
-     return hall->total_distance;
+     return hall->rel_odom;
  }
+
+ static int abz_stm32_calibrate_eangle(const struct device *dev)
+ {
+    /* TODO: Implement position calculation */
+    const struct abz_hall_stm32_data *data = dev->data;
+    struct hall_data_t* hall = (struct hall_data_t*)(&data->hall);
+
+    const struct abz_hall_stm32_config *cfg = dev->config;
+    int hu_state = gpio_pin_get_dt(&cfg->hu_gpio);
+    int hv_state = gpio_pin_get_dt(&cfg->hv_gpio); 
+    int hw_state = gpio_pin_get_dt(&cfg->hw_gpio);     
+    uint8_t cur_sect;
+    cur_sect = hu_state<<2|hw_state<<1|hv_state;          
+    hall->cur_sect = cur_sect;
+    hall->eangle = hall->base_angle[cur_sect] + 30.0f;
+    LL_TIM_SetCounter(cfg->timer,ABZ_ENCODER_LINES);
+    return 0;
+ }
+
   /*
   * Enable hall sensor interface
   */
@@ -247,17 +253,8 @@ static void abz_stm32_set_total_distance(const struct device *dev)
       if (ret < 0) {
           LOG_ERR("Failed to configure interrupts");
       }
-      int hu_state = gpio_pin_get_dt(&cfg->hu_gpio);
-      int hv_state = gpio_pin_get_dt(&cfg->hv_gpio); 
-      int hw_state = gpio_pin_get_dt(&cfg->hw_gpio);
-     //  LOG_DBG("Hall states - HALL_VAL:%d", hu_state<<2|hv_state<<1|hw_state)
       /* Update sector information */
-      uint8_t cur_sect;
-      cur_sect = hu_state<<2|hw_state<<1|hv_state;
 
-      const struct abz_hall_stm32_data *data = dev->data;
-      struct hall_data_t* hall = (struct hall_data_t*)(&data->hall);  
-      hall->realcacle_angle = _normalize_angle(hall->negative_sect[cur_sect].angle - 0.523f);
   }
   
  /* Driver API structure */
@@ -265,9 +262,10 @@ static void abz_stm32_set_total_distance(const struct device *dev)
      .get_rads = abz_stm32_get_rads,
      .get_eangle = abz_stm32_get_eangle,
      .get_mangle = abz_stm32_get_mangle,
-     .get_position = abz_stm32_get_position,
-     .hall_start = abz_hall_stm32_enable,
-     .set_toli_dis = abz_stm32_set_total_distance,
+     .calibration = abz_stm32_calibrate_eangle,
+     .get_rel_odom = abz_stm32_get_rel_odom,
+     .feedback_enable = abz_hall_stm32_enable,
+     .set_rel_odom = abz_stm32_set_rel_odom,
  };
  
  /*
@@ -293,7 +291,6 @@ static void abz_stm32_set_total_distance(const struct device *dev)
      uint8_t cur_sect;
      cur_sect = hu_state<<2|hw_state<<1|hv_state;     
      hall_angleupdate(&(data->hall),cur_sect);
-    //  data->pre_sect = data->cur_sect;
 
  }
  
@@ -324,12 +321,12 @@ static void abz_stm32_set_total_distance(const struct device *dev)
      LL_TIM_InitTypeDef TIM_InitStruct = {
          .Prescaler = 0,
          .CounterMode = LL_TIM_COUNTERMODE_UP,
-         .Autoreload = config->lines,
+         .Autoreload = ABZ_ENCODER_LINES_X2,//config->lines,
          .ClockDivision = LL_TIM_CLOCKDIVISION_DIV1
      };
      LL_TIM_Init(config->timer, &TIM_InitStruct);
      LL_TIM_DisableARRPreload(config->timer);
-     LL_TIM_SetEncoderMode(config->timer, LL_TIM_ENCODERMODE_X2_TI1);
+     LL_TIM_SetEncoderMode(config->timer, LL_TIM_ENCODERMODE_X4_TI12);
      
      /* Channel 1 configuration */
      LL_TIM_IC_SetActiveInput(config->timer, LL_TIM_CHANNEL_CH1, LL_TIM_ACTIVEINPUT_DIRECTTI);
@@ -384,31 +381,13 @@ static void abz_stm32_set_total_distance(const struct device *dev)
          return ret;
      }
      struct hall_data_t *hall = &(data->hall);
-     hall->positive_sect[6].angle = _normalize_angle(SCETION_6_BASEANGLE + HALL_POSITIVE_OFFSET);
-     hall->positive_sect[4].angle = _normalize_angle(SCETION_4_BASEANGLE + HALL_POSITIVE_OFFSET);
-     hall->positive_sect[5].angle = _normalize_angle(SCETION_5_BASEANGLE + HALL_POSITIVE_OFFSET);
-     hall->positive_sect[1].angle = _normalize_angle(SCETION_1_BASEANGLE + HALL_POSITIVE_OFFSET);
-     hall->positive_sect[3].angle = _normalize_angle(SCETION_3_BASEANGLE + HALL_POSITIVE_OFFSET);
-     hall->positive_sect[2].angle = _normalize_angle(SCETION_2_BASEANGLE + HALL_POSITIVE_OFFSET);
-     hall->positive_sect[6].diff = _normalize_angle(hall->positive_sect[6].angle - hall->positive_sect[2].angle);
-     hall->positive_sect[4].diff = _normalize_angle(hall->positive_sect[4].angle - hall->positive_sect[6].angle);
-     hall->positive_sect[5].diff = _normalize_angle(hall->positive_sect[5].angle - hall->positive_sect[4].angle);
-     hall->positive_sect[1].diff = _normalize_angle(hall->positive_sect[1].angle - hall->positive_sect[5].angle);
-     hall->positive_sect[3].diff = _normalize_angle(hall->positive_sect[3].angle - hall->positive_sect[1].angle);
-     hall->positive_sect[2].diff = _normalize_angle(hall->positive_sect[2].angle - hall->positive_sect[3].angle);
-
-     hall->negative_sect[6].angle = hall->positive_sect[4].angle + HALL_NEGATIVE_OFFSET;
-     hall->negative_sect[4].angle = hall->positive_sect[5].angle + HALL_NEGATIVE_OFFSET;
-     hall->negative_sect[5].angle = hall->positive_sect[1].angle + HALL_NEGATIVE_OFFSET;
-     hall->negative_sect[1].angle = hall->positive_sect[3].angle + HALL_NEGATIVE_OFFSET;
-     hall->negative_sect[3].angle = hall->positive_sect[2].angle + HALL_NEGATIVE_OFFSET;
-     hall->negative_sect[2].angle = hall->positive_sect[6].angle + HALL_NEGATIVE_OFFSET;
-     hall->negative_sect[6].diff = -hall->positive_sect[5].diff;
-     hall->negative_sect[4].diff = -hall->positive_sect[1].diff;
-     hall->negative_sect[5].diff = -hall->positive_sect[3].diff;
-     hall->negative_sect[1].diff = -hall->positive_sect[2].diff; 
-     hall->negative_sect[3].diff = -hall->positive_sect[6].diff;
-     hall->negative_sect[2].diff = -hall->positive_sect[4].diff;        
+     hall->base_angle[1] = SCETION_1_BASEANGLE;  
+     hall->base_angle[2] = SCETION_2_BASEANGLE;
+     hall->base_angle[3] = SCETION_3_BASEANGLE;
+     hall->base_angle[4] = SCETION_4_BASEANGLE;
+     hall->base_angle[5] = SCETION_5_BASEANGLE;
+     hall->base_angle[6] = SCETION_6_BASEANGLE;
+     hall->eangle = 0.0f;
      return 0;
  }
  

@@ -99,7 +99,7 @@ static inline void foc_write_data(const struct device* dev,int16_t flag,float* i
    api->write_data(dev,flag,input);
 }
 
-extern  float foc_speedexcu(const struct device* dev,float cur_speed);
+extern  float foc_calculate_speed(const struct device* dev,float cur_speed);
 void svm_apply_voltage_limiting(const struct device* dev, float *vd, float *vq,float Vdc);
 void svm_apply_svm_compensation(const struct device* dev, float *valpha, float *vbeta,float Vdc) ;
 

@@ -8,7 +8,7 @@
  * - Open loop control
  */
 
- #include "algorithmlib/filter.h"
+#include "algorithmlib/filter.h"
 #include "algorithmlib/pid.h"
 #include "lib/focutils/svm/svm.h"
 #include "lib/focutils/utils/deadtime_comp.h"
@@ -61,8 +61,7 @@ static void _write(const struct device* dev,int16_t flag,float *input)
         {
             float posi_ref;
             posi_ref = input[0];
-            s_pos_planning(&data->s_pos_ph, 0.0f, posi_ref, 3.0f);
-            // data->pos_ref = posi_ref;
+            data->pos_ref = posi_ref;
         }
         break;
         case FOC_PARAM_POSI_PLANNING:
@@ -70,8 +69,6 @@ static void _write(const struct device* dev,int16_t flag,float *input)
             float posi_ref;
             posi_ref = input[0];
             data->pos_splanning_targe = posi_ref;
-            // s_pos_planning(&data->s_pos_ph, 0.0f, posi_ref, 3.0f);
-            // data->pos_ref = posi_ref;
         }
         break;
         case FOC_PARAM_DQ_REAL:
@@ -121,7 +118,7 @@ static void _write(const struct device* dev,int16_t flag,float *input)
      return 0;
  }
  
- float foc_speedexcu(const struct device* dev,float cur_speed)
+ float foc_calculate_speed(const struct device* dev,float cur_speed)
  {
     struct foc_data *data = dev->data;
     float speed;

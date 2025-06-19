@@ -189,7 +189,6 @@ fsm_rt_t motor_speed_control_mode(fsm_cb_t *obj) {
     /*-----------IDLE-------------*/
   case MOTOR_STATE_IDLE:
     m_data->statue = MOTOR_STATE_IDLE;
-    /* Main operational state - handled by FOC */
     break;
     /*-----------STOP-------------*/
   case MOTOR_STATE_STOP:
@@ -235,15 +234,16 @@ fsm_rt_t motor_position_control_mode(fsm_cb_t *obj)
   struct foc_data *f_data = foc->data;
   SPosPlanner *planner = &(f_data->s_pos_ph);
   const struct device *feedback = ((const struct motor_config *)motor->config)->feedback;
+  const struct motor_config *mcfg = motor->config;
 
   float bus_vol = currsmp_get_busvol();
 
   foc_write_data(foc, FOC_PARAM_BUSVOL, &bus_vol);
   statemachine_updatestatus(obj, obj->sig);
-  // if(bus_vol<45.0f)
-  // {
-  //   obj->chState = MOTOR_STATE_FAULT;
-  // }
+  if(bus_vol<45.0f)
+  {
+    obj->chState = MOTOR_STATE_FAULT;
+  }
   switch (obj->chState) {
   case ENTER:
     m_data->mode = MOTOR_MODE_POSI;
@@ -254,6 +254,8 @@ fsm_rt_t motor_position_control_mode(fsm_cb_t *obj)
     pid_init(&(f_data->pos_pid), 5.0f, 0.0001f, 0.50f, POS_PID_LIMIT_MAX, -POS_PID_LIMIT_MAX);
     s_pos_planner_init(planner, 1400.0f, 3000.0f, 15000.0f);
     motor_start(motor);
+    feedback_calibration(mcfg->feedback);
+
     obj->chState = MOTOR_STATE_IDLE;
     break;
     /*-----------INIT-------------*/
@@ -282,7 +284,7 @@ fsm_rt_t motor_position_control_mode(fsm_cb_t *obj)
       temp_cont = 0;
       f_data->pos_ref = s_pos_update(planner,0.005f);
     }
-    f_data->speed_ref =  pid_contrl(&f_data->pos_pid,f_data->pos_ref,cur_pos);
+    f_data->speed_ref = pid_contrl(&f_data->pos_pid,f_data->pos_ref,cur_pos);
     f_data->id_ref = 0.0f;
     f_data->iq_ref = pid_contrl(&f_data->speed_pid, f_data->speed_ref, cur_speed);
     break;
@@ -321,7 +323,7 @@ fsm_rt_t motor_position_control_mode(fsm_cb_t *obj)
     break;
   case MOTOR_STATE_FAULT:
     motor_set_threephase_disable(motor);
-    m_data->statue = MOTOR_STATE_FAULT;
+    m_data->statue = MOTOR_STATE_IDLE;
     break;
   case EXIT:
     LOG_INF("Exit pos mode");
