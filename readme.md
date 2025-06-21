@@ -15,3 +15,5 @@
     - 定时器停止
 - 模式控制
 - 故障检测模块
+
+- `west build -b zgm_002 motor/ -- -DBOARD_ROOT=$(pwd)/motor -DOVERLAY_CONFIG="superlift_app.conf"`

@@ -3,3 +3,4 @@
 source "Kconfig.zephyr"
 rsource "lib/Kconfig"
 rsource "lib/bldcmotor/Kconfig.motor"
+rsource "Kconfig.app"
