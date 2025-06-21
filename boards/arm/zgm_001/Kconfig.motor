@@ -1,0 +1,48 @@
+choice
+    prompt "Motor Type Selection"
+    default MOTOR_GM6020
+    help
+      Select the motor type for this board
+
+config MOTOR_GM6020
+    bool "GM6020 (200W brushless)"
+    help
+      200W brushless motor with encoder
+
+config MOTOR_M3508
+    bool "M3508 (Compact brushless)"
+    help
+      Compact brushless motor with reducer
+
+config MOTOR_M2006
+    bool "M2006 (Small brushless)"
+    help
+      Small brushless motor for lightweight applications
+endchoice
+
+# 电机特性参数配置
+config MOTOR_POLE_PAIRS
+    int "Motor pole pairs"
+    default 7 if MOTOR_GM6020
+    default 4 if MOTOR_M3508
+    default 4 if MOTOR_M2006
+    range 1 20
+    help
+      Number of magnetic pole pairs in the motor
+
+config MOTOR_MAX_RPM
+    int "Maximum RPM"
+    default 5000 if MOTOR_GM6020
+    default 20000 if MOTOR_M3508
+    default 15000 if MOTOR_M2006
+    range 1000 30000
+    help
+      Maximum rotation speed in RPM
+
+config MOTOR_TORQUE_CONSTANT
+    float "Torque constant (Nm/A)"
+    default 0.18 if MOTOR_GM6020
+    default 0.12 if MOTOR_M3508
+    default 0.08 if MOTOR_M2006
+    help
+      Motor torque constant

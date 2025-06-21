@@ -1,0 +1,102 @@
+choice
+    prompt "Motor Type Selection"
+    default MOTOR_SUPER_ABZHALL_400W
+    help
+      Select the motor type for this board
+
+config MOTOR_SUPER_ABZHALL_400W
+    bool "SPUER_400 (400W brushless)"
+    help
+      400W brushless motor with encoder
+
+config MOTOR_BARO_ABZHALL_750W
+    bool "M3508 (Compact brushless)"
+    help
+      Compact brushless motor with reducer
+
+config MOTOR_ELUR_HALL
+    bool "M2006 (Small brushless)"
+    help
+      Small brushless motor for lightweight applications
+endchoice
+
+# 电机特性参数配置
+config MOTOR_POLE_PAIRS
+    int "Motor pole pairs"
+    default 5 if MOTOR_SUPER_ABZHALL_400W
+    default 4 if MOTOR_BARO_ABZHALL_750W
+    default 2 if MOTOR_ELUR_HALL
+    range 1 20
+    help
+      Number of magnetic pole pairs in the motor
+
+config MOTOR_MAX_RPM
+    int "Maximum RPM"
+    default 3000 if MOTOR_SUPER_ABZHALL_400W
+    default 3000 if MOTOR_BARO_ABZHALL_750W
+    default 3000 if MOTOR_ELUR_HALL
+    range 1000 30000
+    help
+      Maximum rotation speed in RPM
+
+config MOTOR_TORQUE_CONSTANT
+    int "Torque constant (Nm/A)"
+    default 180 if MOTOR_SUPER_ABZHALL_400W
+    default 120 if MOTOR_BARO_ABZHALL_750W
+    default 80 if MOTOR_ELUR_HALL
+    help
+      Motor torque constant
+
+
+# ===== 新增配置：编码器参数 =====
+config ABZ_ENCODER_LINES
+    int "ABZ Encoder lines (PPR)"
+    default 4096
+    range 100 65535
+    help
+      Number of pulses per revolution (PPR) for ABZ encoder
+
+# ===== 新增配置：霍尔传感器参数 =====
+config HALL_SENSOR_POSITIVE_OFFSET_CENTI
+    int "Hall sensor positive offset (centi-degrees)"
+    default -3000  # -30.0° * 100
+    range -18000 18000  # -180° to 180°
+    help
+      Positive direction offset for hall sensor in centi-degrees
+      (Divide by 100 to get degrees)
+
+config HALL_SENSOR_NEGATIVE_OFFSET_CENTI
+    int "Hall sensor negative offset (centi-degrees)"
+    default 0
+    range -18000 18000
+    help
+      Negative direction offset for hall sensor in centi-degrees
+
+# ===== 新增配置：电机扇区基准角度 =====
+menu "Motor Sector Base Angles (centi-degrees)"
+
+config SECTION_1_BASEANGLE_CENTI
+    int "Section 1 base angle"
+    default 22600  # 226.00° * 100
+
+config SECTION_2_BASEANGLE_CENTI
+    int "Section 2 base angle"
+    default 34600  # 346.00° * 100
+
+config SECTION_3_BASEANGLE_CENTI
+    int "Section 3 base angle"
+    default 28600  # 286.00° * 100
+
+config SECTION_4_BASEANGLE_CENTI
+    int "Section 4 base angle"
+    default 10600  # 106.00° * 100
+
+config SECTION_5_BASEANGLE_CENTI
+    int "Section 5 base angle"
+    default 16600  # 166.00° * 100
+
+config SECTION_6_BASEANGLE_CENTI
+    int "Section 6 base angle"
+    default 4600   # 046.00° * 100
+
+endmenu

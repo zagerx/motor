@@ -24,22 +24,11 @@
  #include <zephyr/irq.h>
  #include <drivers/feedback.h>
  #include <stm32_ll_tim.h>
- 
+ #include <lib/bldcmotor/motor_Parameter.h>
+
  LOG_MODULE_REGISTER(abz_hall_stm32, LOG_LEVEL_DBG);
 
- #define SCETION_3_BASEANGLE             (286.00f)
- #define SCETION_2_BASEANGLE             (346.00f)
- #define SCETION_6_BASEANGLE             (046.00f)
- #define SCETION_4_BASEANGLE             (106.00f)
- #define SCETION_5_BASEANGLE             (166.00f)
- #define SCETION_1_BASEANGLE             (226.00f)
-
- #define HALL_SENSOR_POSITIVE_OFFSET     (-30.0f)  /* 霍尔传感器正方向偏移量 (度) */
- #define HALL_SENSOR_NEGATIVE_OFFSET     (0.0f)   /* 霍尔传感器负方向偏移量 (度) */
-
- #define ABZ_ENCODER_LINES                  (4096)//编码器线数
- #define ABZ_ENCODER_LINES_X2               (8192)
- #define ABZ_ENCODER_RESOLUTION             (0.087890625f)
+#define ABZ_ENCODER_LINES_X2            (ABZ_ENCODER_LINES*2)
 
 static inline float _normalize_angle(float angle)
 {

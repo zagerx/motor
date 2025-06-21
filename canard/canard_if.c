@@ -339,14 +339,14 @@ static void handle_set_mode(CanardRxTransfer* transfer) {
         // 模式转换逻辑
         switch(req.mode) {
             case dinosaurs_actuator_wheel_motor_SetMode_Request_2_0_SPEED_MODE:
-                motor_cmd_set(MOTOR_CMD_SET_SPEED_MODE, NULL, 0);
+                // motor_cmd_set(MOTOR_CMD_SET_SPEED_MODE, NULL, 0);
                 break;
             case dinosaurs_actuator_wheel_motor_SetMode_Request_2_0_CURRENT_MODE:
-                motor_cmd_set(MOTOR_CMD_SET_TORQUE_MODE, NULL, 0);
+                // motor_cmd_set(MOTOR_CMD_SET_TORQUE_MODE, NULL, 0);
                 break;
             // 其他模式处理...
             case dinosaurs_actuator_wheel_motor_SetMode_Request_2_0_POSITION_MODE:
-                motor_cmd_set(MOTOR_CMD_SET_POSTION_MODE, NULL, 0);
+                // motor_cmd_set(MOTOR_CMD_SET_POSTION_MODE, NULL, 0);
                 break;
         }
 
@@ -384,9 +384,9 @@ static void handle_motor_enable(CanardRxTransfer* transfer)
         
         // 执行电机控制
         if(req.enable_state == 0) {
-            motor_cmd_set(MOTOR_CMD_SET_ENABLE,0,0);
+            // motor_cmd_set(MOTOR_CMD_SET_ENABLE,0,0);
         } else {
-            motor_cmd_set(MOTOR_CMD_SET_DISABLE,0,0);
+            // motor_cmd_set(MOTOR_CMD_SET_DISABLE,0,0);
         }
         // 发送响应
         dinosaurs_actuator_wheel_motor_Enable_Response_1_0 resp = {
@@ -428,7 +428,7 @@ static void handle_set_targe(CanardRxTransfer* transfer)
         float buf[2];
         buf[0] = req.velocity.elements[0].meter_per_second;
         buf[1] = req.velocity.elements[1].meter_per_second;
-        motor_cmd_set(MOTOR_CMD_SET_SPEED,buf,ARRAY_SIZE(buf));
+        // motor_cmd_set(MOTOR_CMD_SET_SPEED,buf,ARRAY_SIZE(buf));
         // 创建响应
         dinosaurs_actuator_wheel_motor_SetTargetValue_Response_2_0 response = {
             .status = dinosaurs_actuator_wheel_motor_SetTargetValue_Response_2_0_SET_SUCCESS
@@ -472,7 +472,7 @@ static void handle_pid_parameter(CanardRxTransfer* transfer)
         buf[0] = req.pid_params[0];
         buf[1] = req.pid_params[1];
 
-        motor_cmd_set(MOTOR_CMD_SET_PIDPARAM,buf,ARRAY_SIZE(buf));
+        // motor_cmd_set(MOTOR_CMD_SET_PIDPARAM,buf,ARRAY_SIZE(buf));
         // 准备响应
         dinosaurs_actuator_wheel_motor_PidParameter_Response_1_0 resp = {
             .status = dinosaurs_actuator_wheel_motor_PidParameter_Response_1_0_SET_SUCCESS
